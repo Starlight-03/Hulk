@@ -1,0 +1,15 @@
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\bin\Debug\net7.0\Hulk.exe
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\bin\Debug\net7.0\Hulk.deps.json
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\bin\Debug\net7.0\Hulk.runtimeconfig.json
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\bin\Debug\net7.0\Hulk.dll
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\bin\Debug\net7.0\Hulk.pdb
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.csproj.AssemblyReference.cache
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.AssemblyInfoInputs.cache
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.AssemblyInfo.cs
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.csproj.CoreCompileInputs.cache
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.dll
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\refint\Hulk.dll
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.pdb
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\Hulk.genruntimeconfig.cache
+C:\Users\Sheila Roque\Programming\MyPrograms\Projects\HULK\obj\Debug\net7.0\ref\Hulk.dll
