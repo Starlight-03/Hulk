@@ -13,7 +13,9 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             string line = "print(\"Hello World\");";
+            System.Console.WriteLine(line);
             scanner.Tokenize(line);
+            break;
         }
     }
 }
