@@ -1,6 +1,7 @@
 public class Parser
 {
     private SyntaxError syntaxError;
+    private int index;
     public Parser()
     {
         
@@ -8,23 +9,23 @@ public class Parser
 
     public void Parse(List<Token> tokens)
     {
-        int i = 0;
+        index = 0;
         string expression = "";
-        if (tokens[i++].Value != "print")
+        if (tokens[index++].Value != "print")
         {
             syntaxError = new SyntaxError("Missing expression print");
             syntaxError.Show();
             return;
         }
 
-        if (tokens[i++].Value != "(")
+        if (tokens[index++].Value != "(")
         {
             syntaxError = new SyntaxError("Missing opening parenthesis after keyword print");
             syntaxError.Show();
             return;
         }
 
-        if (tokens[i++].Key != Token.TokenType.Literal)
+        if (tokens[index].Type != TokenType.Expression)
         {
             syntaxError = new SyntaxError("Missing literal after print expression");
             syntaxError.Show();
@@ -32,17 +33,17 @@ public class Parser
         }
         else
         {
-            expression = tokens[i-1].Value;
+            expression = tokens[index++].Value;
         }
 
-        if (tokens[i++].Value != ")")
+        if (tokens[index++].Value != ")")
         {
             syntaxError = new SyntaxError($"Missing closing parenthesis after {expression} expression");
             syntaxError.Show();
             return;
         }
 
-        if (tokens[i++].Value != ";")
+        if (tokens[index++].Value != ";")
         {
             syntaxError = new SyntaxError("Missing semicolon after the end of line");
             syntaxError.Show();
@@ -50,5 +51,11 @@ public class Parser
         }
 
         System.Console.WriteLine(expression);
+    }
+
+    private void EvaluateFunction(Token[] tokens)
+    {
+        if (tokens[index].Type == TokenType.Keyword) ;
+
     }
 }

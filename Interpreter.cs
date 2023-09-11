@@ -14,7 +14,12 @@ public class Interpreter
             // string line = Console.ReadLine();
             string line = "print(\"Hello World\");";
             System.Console.WriteLine(line);
-            scanner.Tokenize(line);
+            List<Token> tokens = scanner.GetTokens(line);
+            if (tokens != null)
+            {
+                Parser parser = new Parser();
+                parser.Parse(tokens);
+            }
             break;
         }
     }
