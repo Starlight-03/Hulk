@@ -125,7 +125,7 @@ public class Assign : Expression
     }
 }
 
-public class IF : Expression
+public class If_Else : Expression
 {
     private Expression Condition;
     private Expression Positive;
