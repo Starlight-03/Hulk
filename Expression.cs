@@ -1,6 +1,10 @@
 public abstract class Expression
 {
     public abstract int Evaluate(Context context);
+    public override string ToString()
+    {
+        return base.ToString();
+    }
 }
 
 public abstract class BinaryExpression : Expression
@@ -94,6 +98,11 @@ public class Number : Expression
     {
         return Value;
     }
+
+    public override string ToString()
+    {
+        return this.Value.ToString();
+    }
 }
 
 public class Variable : Expression
@@ -127,10 +136,11 @@ public class Assign : Expression
 
 public class If_Else : Expression
 {
+    // Una expresión if tiene tres elementos: condición, parte del cuerpo true y parte del cuerpo false
     private Expression Condition;
     private Expression Positive;
     private Expression Negative;
-    public IF(Expression condition, Expression positive, Expression negative)
+    public If_Else(Expression condition, Expression positive, Expression negative)
     {
         Condition = condition;
         Positive = positive;
