@@ -2,18 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            // Use IntelliSense to find out which attributes exist for C# debugging
-            // Use hover for the description of the existing attributes
-            // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
+            // Use IntelliSense para averiguar qué atributos existen para la depuración de C#.
+            // Usar el puntero por encima para la descripción de los atributos existentes
+            // Para obtener más información, visite https://github.com/dotnet/vscode-csharp/blob/main/debugger-launchjson.md
             "name": ".NET Core Launch (console)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/net7.0/Hulk.dll",
+            // Si ha cambiado las plataformas de destino, asegúrese de actualizar la ruta de acceso del programa.
+            "program": "${workspaceFolder}/bin/Debug/net7.0/HULK.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
-            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
+            // Para obtener más información sobre el campo \"consola\", consulte https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false
         },
