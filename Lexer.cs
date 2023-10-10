@@ -2,7 +2,7 @@ public class Lexer
 {
     private LexError? lexError;
 
-    private List<Token> Tokens;
+    private List<Token> tokens;
 
     private readonly string line;
 
@@ -12,7 +12,7 @@ public class Lexer
     
     public Lexer(string line)
     {
-        this.Tokens = new List<Token>();
+        this.tokens = new List<Token>();
         this.line = line;
         i = 0;
     }
@@ -24,34 +24,19 @@ public class Lexer
             if (char.IsWhiteSpace(Look()))
                 continue;
             else if (Look() == '\"')
-                Tokens.Add(GetStringExpression());
+                this.tokens.Add(GetStringExpression());
             else if (char.IsLetterOrDigit(Look()) || char.IsPunctuation(Look()) || char.IsSymbol(Look()))
-                Tokens.Add(GetToken());
+                this.tokens.Add(GetToken());
         }
         
-        foreach (Token token in Tokens)
+        foreach (Token token in this.tokens)
             if (token == null)
                 return null;
 
-        return Tokens;
+        return this.tokens;
     }
 
     #region Lex Tools
-    private bool CanLook()
-    {
-        return i < N && i >= 0;
-    }
-
-    private bool CanLookAhead()
-    {
-        return i < N - 1;
-    }
-
-    private bool CanLookBack()
-    {
-        return i > 0;
-    }
-
     private void GoForward()
     {
         i++;
@@ -60,6 +45,16 @@ public class Lexer
     private void GoBack()
     {
         i--;
+    }
+
+    private bool CanLook()
+    {
+        return i < N && i >= 0;
+    }
+
+    private bool CanLookAhead()
+    {
+        return i < N - 1;
     }
 
     private char Look()
@@ -78,17 +73,9 @@ public class Lexer
             return ' ';
     }
 
-    private char LookBack()
-    {
-        if (CanLookBack())
-            return this.line[i - 1];
-        else
-            return ' ';
-    }
-
     private bool IsToken(string token)
     {
-        return Token.Grammar.ContainsKey(token);
+        return TokenValues.Grammar.ContainsKey(token);
     }
 
     private void ThrowNewLexError(string error)
@@ -123,7 +110,7 @@ public class Lexer
         string token = Look().ToString();
 
         if (IsToken(token) && !IsToken(token + LookAhead()))
-            return new Token(TokenType.Separator, token);
+            return new Token(token, TokenType.Separator);
         else
         {
             lexError = new LexError($"{token} is not a valid token");
@@ -137,14 +124,14 @@ public class Lexer
         string token = Look().ToString();
 
         if (IsToken(token) && !IsToken(token + LookAhead()))
-            return new Token(TokenType.Operator, token);
+            return new Token(token, TokenType.Operator);
         else
         {
             GoForward();
             token += Look();
 
             if (IsToken(token) && !IsToken(token + LookAhead()))
-                return new Token(TokenType.Operator, token);
+                return new Token(token, TokenType.Operator);
             else
             {
                 ThrowNewLexError($"{token} is not a valid token");
@@ -175,7 +162,7 @@ public class Lexer
             else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
             {
                 GoBack();
-                return new Token(TokenType.NumericLiteral, token);
+                return new Token(token, TokenType.NumericLiteral);
             }
             else
             {
@@ -197,15 +184,15 @@ public class Lexer
                 token += Look();
             else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
             {
-                if (Token.Grammar.ContainsKey(token))
+                if (IsToken(token))
                 {
                     GoBack();
-                    return new Token(Token.Grammar[token], token);
+                    return TokenValues.Grammar[token];
                 }
                 else
                 {
                     GoBack();
-                    return new Token(TokenType.Identifier, token);
+                    return new Token(token, TokenType.Identifier);
                 }
             }
         }
@@ -222,7 +209,7 @@ public class Lexer
         for (; CanLook(); GoForward())
         {
             if (Look() == '\"')
-                return new Token(TokenType.StringLiteral, str);
+                return new Token(str, TokenType.StringLiteral);
             else
                 str += Look();
         }

@@ -10,10 +10,10 @@ public class Interpreter
         while (true)
         {
             Console.Write("> ");
-            string line = Console.ReadLine();
+            // string line = Console.ReadLine();
             
-            // string line = "4+64;";
-            // Console.WriteLine(line);
+            string line = "4+64;";
+            Console.WriteLine(line);
 
             if (line == "")
                 break;
@@ -24,12 +24,10 @@ public class Interpreter
             if (tokens == null) 
                 break;
             
-            foreach (Token token in tokens)
-                Console.WriteLine(token.Value);
-            // Parser parser = new Parser();
-            // parser.Parse(tokens);
+            Parser parser = new Parser(tokens);
+            parser.Parse();
             
-            // break;
+            break;
         }
     }
 }
