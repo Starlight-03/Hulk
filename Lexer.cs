@@ -187,24 +187,27 @@ public class Lexer
         return null;
     }
 
-    private Token GetKeywordOrIdentifier() // ! Necesita unos arreglos
+    private Token GetKeywordOrIdentifier()
     {
         string token = "";
 
         for (; CanLook(); GoForward())
         {
-            if (IsToken(token) && !IsToken(token + Look()))
-            {
-                GoBack();
-                return new Token(Token.Grammar[token], token);
-            }
-            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()) && !IsToken(token) && token != "")
-            {
-                GoBack();
-                return new Token(TokenType.Identifier, token);
-            }
-            else
+            if (char.IsLetterOrDigit(Look()))
                 token += Look();
+            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
+            {
+                if (Token.Grammar.ContainsKey(token))
+                {
+                    GoBack();
+                    return new Token(Token.Grammar[token], token);
+                }
+                else
+                {
+                    GoBack();
+                    return new Token(TokenType.Identifier, token);
+                }
+            }
         }
 
         ThrowNewLexError($"{token} is not a valid token");
