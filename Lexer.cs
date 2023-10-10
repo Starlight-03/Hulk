@@ -2,7 +2,7 @@ public class Lexer
 {
     private LexError? lexError;
 
-    public List<Token> Tokens;
+    private List<Token> Tokens;
 
     private readonly string line;
 
@@ -88,7 +88,7 @@ public class Lexer
 
     private bool IsToken(string token)
     {
-        return Grammar.ValidTokens.ContainsKey(token);
+        return Token.Grammar.ContainsKey(token);
     }
 
     private void ThrowNewLexError(string error)
@@ -123,7 +123,7 @@ public class Lexer
         string token = Look().ToString();
 
         if (IsToken(token) && !IsToken(token + LookAhead()))
-            return new Token(Grammar.ValidTokens[token], token);
+            return new Token(TokenType.Separator, token);
         else
         {
             lexError = new LexError($"{token} is not a valid token");
@@ -187,7 +187,7 @@ public class Lexer
         return null;
     }
 
-    private Token GetKeywordOrIdentifier()
+    private Token GetKeywordOrIdentifier() // ! Necesita unos arreglos
     {
         string token = "";
 
@@ -196,7 +196,7 @@ public class Lexer
             if (IsToken(token) && !IsToken(token + Look()))
             {
                 GoBack();
-                return new Token(Grammar.ValidTokens[token], token);
+                return new Token(Token.Grammar[token], token);
             }
             else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()) && !IsToken(token) && token != "")
             {
@@ -228,63 +228,4 @@ public class Lexer
         return null;
     }
     #endregion
-}
-
-public class Token
-{
-    public TokenType Type { get; private set; }
-    
-    public string Value { get; private set; }
-
-    public Token(TokenType key, string value)
-    {
-        this.Type = key;
-        this.Value = value;
-    }
-}
-
-public enum TokenType
-{
-    Identifier,
-    Keyword,
-    Separator,
-    Operator,
-    Expression,
-    NumericLiteral,
-    StringLiteral,
-    BooleanLiteral
-}
-
-public class Grammar
-{
-    public static Dictionary<string, TokenType> ValidTokens = new Dictionary<string, TokenType>()
-    {
-        {"+", TokenType.Operator},
-        {"-", TokenType.Operator},
-        {"*", TokenType.Operator},
-        {"/", TokenType.Operator},
-        {"%", TokenType.Operator},
-        {"^", TokenType.Operator},
-        {"@", TokenType.Operator},
-        {"=", TokenType.Operator},
-        {"=>", TokenType.Operator},
-        {"<", TokenType.Operator},
-        {"<=", TokenType.Operator},
-        {">", TokenType.Operator},
-        {">=", TokenType.Operator},
-        {"==", TokenType.Operator},
-        {"!=", TokenType.Operator},
-        {"(", TokenType.Separator},
-        {")", TokenType.Separator},
-        {",", TokenType.Separator},
-        {";", TokenType.Separator},
-        {"print", TokenType.Keyword},
-        {"function", TokenType.Keyword},
-        {"let", TokenType.Keyword},
-        {"in", TokenType.Keyword},
-        {"if", TokenType.Keyword},
-        {"else", TokenType.Keyword},
-        {"true", TokenType.BooleanLiteral},
-        {"false", TokenType.BooleanLiteral}
-    };
 }
