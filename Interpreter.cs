@@ -7,7 +7,7 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             
-            string line = "(5 + 1) * (2 - 3) / 4;";
+            string line = "(5 + 1) * (2 - 3) + 4 / 2;";
             Console.WriteLine(line);
 
             if (line == "")

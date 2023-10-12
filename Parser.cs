@@ -14,9 +14,10 @@ public class Parser
 
     public bool Parse()
     {
-        return E() && Match(GetToken(";"));
+        return Expression() && Match(GetToken(";"));
     }
 
+    #region Parsing Tools
     private bool Match(Token token)
     {
         return this.tokens[index++] == token;
@@ -37,67 +38,85 @@ public class Parser
     {
         return TokenValues.Grammar[value];
     }
+    #endregion
 
-    private bool E()
+    private bool Expression()
     {
-        // E -> T X Y
-        return T() && X() && Y();
+        if (this.tokens[index].Type == TokenType.NumericLiteral)
+            return NumericalExpression();
+        else if (this.tokens[index].Type == TokenType.Keyword)
+            return Function();
+        else 
+            return false;
     }
 
-    private bool T()
+    private bool Function()
     {
-        // T -> int Y | (E) Y
+        throw new NotImplementedException();
+    }
+
+    #region Parsing Numerical Expressions
+    private bool NumericalExpression()
+    {
+        // E -> T (+|-) (*|/)
+        return Term() && SumSub() && MulDiv();
+    }
+
+    private bool Term()
+    {
+        // T -> int (*|/) | (E) (*|/)
         int pos = index;
-        return T1() || Reset(pos) && T2();
+        return Term1() || Reset(pos) && Term2();
     }
 
-    private bool T1()
+    private bool Term1()
     {
-        // T -> int Y 
-        return MatchNumber() && Y();
+        // T -> int (*|/)
+        return MatchNumber() && MulDiv();
     }
 
-    private bool T2()
+    private bool Term2()
     {
-        // T -> (E)
-        return Match(GetToken("(")) && E() && Match(GetToken(")")) && Y();
+        // T -> (E) (*|7)
+        return Match(GetToken("(")) && NumericalExpression() && Match(GetToken(")")) && MulDiv();
     }
 
-    private bool X()
+    private bool SumSub()
     {
-        // X -> + E | - E | e
+        // (+|-) -> + E | - E | e
         int pos = index;
-        return X1() || Reset(pos) && X2() || Reset(pos) && true;
+        return Sum() || Reset(pos) && Sub() || Reset(pos) && true;
     }
 
-    private bool X1()
+    private bool Sum()
     {
-        // X -> + E
-        return Match(GetToken("+")) && E();
+        // + E
+        return Match(GetToken("+")) && NumericalExpression();
     }
 
-    private bool X2()
+    private bool Sub()
     {
-        // X -> - E
-        return Match(GetToken("-")) && E();
+        // - E
+        return Match(GetToken("-")) && NumericalExpression();
     }
 
-    private bool Y()
+    private bool MulDiv()
     {
-        // Y -> * T | / T | e
+        // (*|/) -> * T | / T | e
         int pos = index;
-        return Y1() || Reset(pos) && Y2() || Reset(pos) && true;
+        return Mul() || Reset(pos) && Div() || Reset(pos) && true;
     }
 
-    private bool Y1()
+    private bool Mul()
     {
-        // Y -> * T
-        return Match(GetToken("*")) && T();
+        // * T
+        return Match(GetToken("*")) && Term();
     }
 
-    private bool Y2()
+    private bool Div()
     {
-        // Y -> / T
-        return Match(GetToken("/")) && T();
+        // / T
+        return Match(GetToken("/")) && Term();
     }
+    #endregion
 }
