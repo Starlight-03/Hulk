@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 public class Parser
 {
     private SyntaxError syntaxError;
@@ -16,7 +14,7 @@ public class Parser
 
     public bool Parse()
     {
-        throw new NotImplementedException();
+        return E() && Match(GetToken(";"));
     }
 
     private bool Match(Token token)
@@ -24,44 +22,82 @@ public class Parser
         return this.tokens[index++] == token;
     }
 
-    private void Reset(int pos)
+    private bool MatchNumber()
+    {
+        return this.tokens[index++].Type == TokenType.NumericLiteral;
+    }
+
+    private bool Reset(int pos)
     {
         index = pos;
+        return true;
+    }
+
+    private Token GetToken(string value)
+    {
+        return TokenValues.Grammar[value];
     }
 
     private bool E()
     {
-        // Parsea un no-terminal E
-        int pos = index;
-        if (E1()) 
-            return true;
-        
-        Reset(pos);
-        if (E2())
-            return true;
-
-        return false;
-    }
-
-    private bool E1()
-    {
-        // E -> T
-        return T();
-    }
-
-    private bool E2()
-    {
-        // E -> T + E
-        return T() && Match(TokenValues.Grammar["+"]) && E();
+        // E -> T X Y
+        return T() && X() && Y();
     }
 
     private bool T()
     {
-        // Parsea un no-terminal T
-        throw new NotImplementedException();
+        // T -> int Y | (E) Y
+        int pos = index;
+        return T1() || Reset(pos) && T2();
     }
 
-    // La semántica de cada uno de estos métodos es que devuelven true si y solo si 
-    // el no-terminal correspondiente genera una parte de la cadena, comenzando en 
-    // la posición nextToken.
+    private bool T1()
+    {
+        // T -> int Y 
+        return MatchNumber() && Y();
+    }
+
+    private bool T2()
+    {
+        // T -> (E)
+        return Match(GetToken("(")) && E() && Match(GetToken(")")) && Y();
+    }
+
+    private bool X()
+    {
+        // X -> + E | - E | e
+        int pos = index;
+        return X1() || Reset(pos) && X2() || Reset(pos) && true;
+    }
+
+    private bool X1()
+    {
+        // X -> + E
+        return Match(GetToken("+")) && E();
+    }
+
+    private bool X2()
+    {
+        // X -> - E
+        return Match(GetToken("-")) && E();
+    }
+
+    private bool Y()
+    {
+        // Y -> * T | / T | e
+        int pos = index;
+        return Y1() || Reset(pos) && Y2() || Reset(pos) && true;
+    }
+
+    private bool Y1()
+    {
+        // Y -> * T
+        return Match(GetToken("*")) && T();
+    }
+
+    private bool Y2()
+    {
+        // Y -> / T
+        return Match(GetToken("/")) && T();
+    }
 }

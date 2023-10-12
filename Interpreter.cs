@@ -1,10 +1,5 @@
 public class Interpreter
 {
-    public Interpreter()
-    {
-
-    }
-
     public void Start()
     {
         while (true)
@@ -12,7 +7,7 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             
-            string line = "4+64;";
+            string line = "(5 + 1) * (2 - 3) / 4;";
             Console.WriteLine(line);
 
             if (line == "")
@@ -25,7 +20,10 @@ public class Interpreter
                 break;
             
             Parser parser = new Parser(tokens);
-            parser.Parse();
+            if (parser.Parse())
+                Console.WriteLine(true);
+            else
+                Console.WriteLine(false);
             
             break;
         }

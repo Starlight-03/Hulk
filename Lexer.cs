@@ -93,10 +93,8 @@ public class Lexer
     #region Tokens Getters
     private Token GetToken()
     {
-        if (char.IsPunctuation(Look()))
-            return GetSeparator();
-        else if (char.IsSymbol(Look()))
-            return GetOperator();
+        if (char.IsPunctuation(Look()) || char.IsSymbol(Look()))
+            return GetSeparatorOrOperator();
         else if (char.IsDigit(Look()))
             return GetNumber();
         else if (char.IsLetter(Look()))
@@ -105,33 +103,19 @@ public class Lexer
             return null;
     }
 
-    private Token GetSeparator()
+    private Token GetSeparatorOrOperator()
     {
         string token = Look().ToString();
 
         if (IsToken(token) && !IsToken(token + LookAhead()))
-            return new Token(token, TokenType.Separator);
-        else
-        {
-            lexError = new LexError($"{token} is not a valid token");
-            lexError.Show();
-            return null;
-        }
-    }
-    
-    private Token GetOperator()
-    {
-        string token = Look().ToString();
-
-        if (IsToken(token) && !IsToken(token + LookAhead()))
-            return new Token(token, TokenType.Operator);
+            return TokenValues.Grammar[token];
         else
         {
             GoForward();
             token += Look();
 
             if (IsToken(token) && !IsToken(token + LookAhead()))
-                return new Token(token, TokenType.Operator);
+                return TokenValues.Grammar[token];
             else
             {
                 ThrowNewLexError($"{token} is not a valid token");
