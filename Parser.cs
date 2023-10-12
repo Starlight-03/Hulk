@@ -14,7 +14,7 @@ public class Parser
 
     public bool Parse()
     {
-        return Expression() && Match(GetToken(";"));
+        return Expression() && Match(TokenValues.Grammar[";"]);
     }
 
     #region Parsing Tools
@@ -32,11 +32,6 @@ public class Parser
     {
         index = pos;
         return true;
-    }
-
-    private Token GetToken(string value)
-    {
-        return TokenValues.Grammar[value];
     }
     #endregion
 
@@ -66,7 +61,8 @@ public class Parser
     {
         // T -> int (*|/) | (E) (*|/)
         int pos = index;
-        return Term1() || Reset(pos) && Term2();
+        return Term1() 
+            || Reset(pos) && Term2();
     }
 
     private bool Term1()
@@ -78,45 +74,51 @@ public class Parser
     private bool Term2()
     {
         // T -> (E) (*|7)
-        return Match(GetToken("(")) && NumericalExpression() && Match(GetToken(")")) && MulDiv();
+        return Match(TokenValues.Grammar["("]) 
+            && NumericalExpression() 
+            && Match(TokenValues.Grammar[")"]) && MulDiv();
     }
 
     private bool SumSub()
     {
         // (+|-) -> + E | - E | e
         int pos = index;
-        return Sum() || Reset(pos) && Sub() || Reset(pos) && true;
+        return Sum() 
+            || Reset(pos) && Sub() 
+            || Reset(pos) && true;
     }
 
     private bool Sum()
     {
         // + E
-        return Match(GetToken("+")) && NumericalExpression();
+        return Match(TokenValues.Grammar["+"]) && NumericalExpression();
     }
 
     private bool Sub()
     {
         // - E
-        return Match(GetToken("-")) && NumericalExpression();
+        return Match(TokenValues.Grammar["-"]) && NumericalExpression();
     }
 
     private bool MulDiv()
     {
         // (*|/) -> * T | / T | e
         int pos = index;
-        return Mul() || Reset(pos) && Div() || Reset(pos) && true;
+        return Mul() 
+            || Reset(pos) && Div() 
+            || Reset(pos) && true;
     }
 
     private bool Mul()
     {
         // * T
-        return Match(GetToken("*")) && Term();
+        return Match(TokenValues.Grammar["*"]) && Term();
     }
 
     private bool Div()
     {
         // / T
-        return Match(GetToken("/")) && Term();
+        return Match(TokenValues.Grammar["/"]) && Term();
     }
     #endregion
 }

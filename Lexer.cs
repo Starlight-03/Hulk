@@ -90,7 +90,7 @@ public class Lexer
     }
     #endregion
 
-    #region Tokens Getters
+    #region Getting Tokens
     private Token GetToken()
     {
         if (char.IsPunctuation(Look()) || char.IsSymbol(Look()))
