@@ -8,7 +8,7 @@ public abstract class Node
 
 }
 
-public class Program
+public class CompilerProgram
 {
     public List<Statement> Statements;
 }
