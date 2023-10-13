@@ -45,6 +45,7 @@ public class Parser
     }
     #endregion
 
+    #region Parsing Expressions
     private bool Expression()
     {
         // Expr -> Print
@@ -62,6 +63,7 @@ public class Parser
             || Reset(pos) && Value()
             || Reset(pos) && Match(TokenValues.Grammar["("]) && Expression() && Match(TokenValues.Grammar[")"]);
     }
+    #endregion
 
     #region Parsing Print
     private bool Print()
