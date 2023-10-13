@@ -4,10 +4,10 @@
          | Func
          | LetIn
          | IfElse
-         | Ident
          | Val
 
-   Val -> NumExpr
+   Val -> Ident
+        | NumExpr
         | Bool
         | Str
 
@@ -29,24 +29,32 @@
 
 ## Bool
 
-   Bool -> (Bool)
-         | Compar
+   Bool -> Compar
          | !Bool
-         | Bool & Bool
-         | Bool | Bool
-         | true
-         | false
+         | Bool OpBool
+         | litBool
 
-   Compar -> NumExpr < NumExpr
-           | NumExpr <= NumExpr
-           | NumExpr > NumExpr
-           | NumExpr >= NumExpr
-           | NumExpr == NumExpr
-           | NumExpr != NumExpr
+   LitBool -> true
+            | false
+
+   OpBool -> & Bool
+           | | Bool
+
+   Compar -> NumExpr OpComp
+
+   OpComp -> < NumExpr
+           | <= NumExpr
+           | > NumExpr
+           | >= NumExpr
+           | == NumExpr
+           | != NumExpr
 
 ## Str
 
-   S -> \" StrExpr \"
+   Str -> StrExpr Conc
+
+   Conc -> @ Val
+         | e
 
 ## Print
 
@@ -70,7 +78,7 @@
 
 ## LetIn
 
-   LetIn -> let Var in Expr
+   LetIn -> let Var in (Expr)
 
    Var -> Ident = Val Var1
 

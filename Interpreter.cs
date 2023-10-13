@@ -7,7 +7,7 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             
-            string line = "function tan(x) => sin(x) / cos(x);";
+            string line = "let a = 42 in if (a % 2 == 0) print(\"Even\") else print(\"odd\");;";
             Console.WriteLine(line);
 
             if (line == "")
