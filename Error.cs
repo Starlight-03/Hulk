@@ -2,9 +2,7 @@ public abstract class Error
 {
     protected ErrorType type;
     
-    protected string info = "";
-
-    public void Show()
+    public void Throw(string info)
     {
         Console.WriteLine("! {0} ERROR: {1}", type, info);
     }
@@ -19,17 +17,15 @@ public enum ErrorType
 
 public class LexError : Error
 {
-    public LexError(string token) : base()
+    public LexError() : base()
     {
-        this.info = $"\'{token}\' is not a valid token.";
         this.type = ErrorType.LEXICAL;
-        Show();
     }
 }
 
 public class SyntaxError : Error
 {
-    public SyntaxError(string info) : base()
+    public SyntaxError() : base()
     {
         this.type = ErrorType.SYNTAX;
     }
@@ -37,7 +33,7 @@ public class SyntaxError : Error
 
 public class SemanticError : Error
 {
-    public SemanticError(string info) : base()
+    public SemanticError() : base()
     {
         this.type = ErrorType.SEMANTIC;
     }

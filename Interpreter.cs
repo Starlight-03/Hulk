@@ -7,7 +7,7 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             
-            string line = "let a = 42 in if (a % 2 == 0) print(\"Even\") else print(\"odd\");;";
+            string line = "function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;";
             Console.WriteLine(line);
 
             if (line == "")

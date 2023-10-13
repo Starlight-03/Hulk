@@ -1,6 +1,6 @@
 public class Lexer
 {
-    private LexError? lexError;
+    private LexError lexError;
 
     private List<Token> tokens;
 
@@ -12,6 +12,7 @@ public class Lexer
     
     public Lexer(string line)
     {
+        this.lexError = new LexError();
         this.tokens = new List<Token>();
         this.line = line;
         i = 0;
@@ -78,12 +79,6 @@ public class Lexer
         return TokenValues.Grammar.ContainsKey(token);
     }
 
-    private void ThrowNewLexError(string error)
-    {
-        lexError = new LexError(error);
-        lexError.Show();
-    }
-
     private bool IsWhiteSpaceOrPunctuationOrSymbol(char c)
     {
         return char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c);
@@ -118,7 +113,7 @@ public class Lexer
                 return TokenValues.Grammar[token];
             else
             {
-                ThrowNewLexError($"{token} is not a valid token");
+                lexError.Throw($"{token} is not a valid token");
                 return null;
             }
         }
@@ -129,29 +124,29 @@ public class Lexer
         string token = "";
         bool point = false;
 
-        for (; CanLook(); GoForward())
-        {
+        for (; CanLook(); GoForward()){
             if (char.IsDigit(Look()))
                 token += Look();
-            else if (Look() == ',' && char.IsDigit(LookAhead()) && !point)
-            {
+            else if (Look() == ',' && char.IsDigit(LookAhead()) && !point){
                 token += '.';
                 point = true;
             }
-            else if (Look() == '.' && !point)
-            {
+            else if (Look() == '.' && !point){
                 token += Look();
                 point = true;
             }
-            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
-            {
+            else if (point && (Look() == ',' || Look() == '.')){
+                token += Look();
+                lexError.Throw($"{token} is not a valid token");
+                break;
+            }
+            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look())){
                 GoBack();
                 return new Token(token, TokenType.NumericLiteral);
             }
-            else
-            {
+            else{
                 token += Look();
-                ThrowNewLexError($"{token} is not a valid token");
+                lexError.Throw($"{token} is not a valid token");
                 break;
             }
         }
@@ -181,7 +176,7 @@ public class Lexer
             }
         }
 
-        ThrowNewLexError($"{token} is not a valid token");
+        lexError.Throw($"{token} is not a valid token");
         return null;
     }
 
@@ -198,7 +193,7 @@ public class Lexer
                 str += Look();
         }
 
-        ThrowNewLexError("String expression missing closure");
+        lexError.Throw("String expression missing closure");
         return null;
     }
     #endregion

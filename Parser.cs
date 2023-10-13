@@ -8,6 +8,7 @@ public class Parser
     
     public Parser(List<Token> tokens)
     {
+        this.syntaxError = new SyntaxError();
         this.tokens = tokens;
         this.index = 0;
     }
