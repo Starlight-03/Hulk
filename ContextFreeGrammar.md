@@ -1,57 +1,82 @@
 # Context Free Grammar
 
-    Expr -> E
-          | F
-          | I
+   Expr -> Print
+         | Func
+         | LetIn
+         | IfElse
+         | Ident
+         | Val
 
-    E -> T X Y
+   Val -> NumExpr
+        | Bool
+        | Str
 
-    X -> + E
-       | - E
-       | e
-    
-    T -> int Y
-       | var Y
-       | (E) Y
+## NumExpr
 
-    Y -> * T
-       | / T
-       | e
+   NumExpr -> Term (+|-) (*|/)
 
-    F -> print(Expr)
-       | function I => Expr
-       | let var = val in Expr
-       | if (B) Expr else Expr
+   (+|-) -> + NumExpr
+          | - NumExpr
+          | e
 
-    I -> id P X Y
+   Term -> int (*|/)
+         | var (*|/)
+         | (NumExpr) (*|/)
 
-    P -> (J)
-       | e
+   (*|/) -> * Term
+          | / Term
+          | e
 
-    J -> I K
-       | int K
-       | e
+## Bool
 
-    K -> , J
-       | e
+   Bool -> (Bool)
+         | Compar
+         | !Bool
+         | Bool & Bool
+         | Bool | Bool
+         | true
+         | false
 
-    var -> id
+   Compar -> NumExpr < NumExpr
+           | NumExpr <= NumExpr
+           | NumExpr > NumExpr
+           | NumExpr >= NumExpr
+           | NumExpr == NumExpr
+           | NumExpr != NumExpr
 
-    val -> E
-         | B
-         | S
+## Str
 
-    B -> (B)
-       | C
-       | !B
-       | B & B
-       | B | B
-       | true
-       | false
+   S -> \" StrExpr \"
 
-    C -> E < E
-       | E <= E
-       | E > E
-       | E >= E
-       | E == E
-       | E != E
+## Print
+
+   Print -> print(Expr)
+
+## Func
+
+   Func -> function Ident => Expr
+
+   Ident -> Id Param (+|-) (*|/)
+
+   Param -> (Param1)
+          | e
+
+   Param1 -> Ident Param2
+           | int Param2
+           | e
+
+   Param2 -> , Param1
+           | e
+
+## LetIn
+
+   LetIn -> let Var in Expr
+
+   Var -> Ident = Val Var1
+
+   Var1 -> , Var
+         | e
+
+## IfElse
+
+   IfElse -> if (Bool) Expr else Expr

@@ -7,7 +7,7 @@ public class Interpreter
             Console.Write("> ");
             // string line = Console.ReadLine();
             
-            string line = "(5 + 1) * (2 - 3) + 4 / 2;";
+            string line = "function tan(x) => sin(x) / cos(x);";
             Console.WriteLine(line);
 
             if (line == "")
