@@ -45,6 +45,7 @@ public static class TokenValues
         {"!", new Token("!", TokenType.Operator)},
         {"&", new Token("&", TokenType.Operator)},
         {"|", new Token("|", TokenType.Operator)},
+        {"\"", new Token("\"", TokenType.Operator)},
         {"(", new Token("(", TokenType.Separator)},
         {")", new Token(")", TokenType.Separator)},
         {",", new Token(",", TokenType.Separator)},

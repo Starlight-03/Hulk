@@ -25,7 +25,11 @@ public class Lexer
             if (char.IsWhiteSpace(Look()))
                 continue;
             else if (Look() == '\"')
+            {
+                this.tokens.Add(TokenValues.Grammar["\""]);
                 this.tokens.Add(GetStringExpression());
+                this.tokens.Add(TokenValues.Grammar["\""]);
+            }
             else if (char.IsLetterOrDigit(Look()) || char.IsPunctuation(Look()) || char.IsSymbol(Look()))
                 this.tokens.Add(GetToken());
         }

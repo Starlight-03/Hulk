@@ -31,7 +31,9 @@ public class Parser
 
     private bool MatchString()
     {
-        return this.tokens[index++].Type == TokenType.StringLiteral;
+        return Match(TokenValues.Grammar["\""])
+            && this.tokens[index++].Type == TokenType.StringLiteral
+            && Match(TokenValues.Grammar["\""]);
     }
 
     private bool MatchIdentifier()
