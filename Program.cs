@@ -7,6 +7,8 @@
 
     public static void Interpreter()
     {
+        Context context = new Context(null);
+
         while (true)
         {
             Console.Write("> ");
@@ -25,12 +27,14 @@
                 break;
             
             Parser parser = new Parser(tokens);
-            if (parser.Parse())
-                Console.WriteLine(true);
-            else
-                Console.WriteLine(false);
-            
-            break;
+            Expression expression = parser.Parse();
+
+            if (expression != null && expression.Validate(context))
+            {
+                expression.Evaluate(context);
+                if (expression.Value != "")
+                    Console.WriteLine(expression.Value);
+            }
         }
     }
 }

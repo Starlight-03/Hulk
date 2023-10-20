@@ -1,203 +1,223 @@
-public class AST
-{
-    
-}
-
 public class Context
 {
     private Context parent;
 
-    private HashSet<Context> children;
+    private Dictionary<string, Expression> variables;
 
-    private HashSet<string> variables;
-
-    private Dictionary<string, string[]> functions;
+    private Dictionary<string, HashSet<string[]>> functions;
 
     public Context(Context parent)
     {
         this.parent = parent;
-        this.children = new HashSet<Context>();
-        this.variables = new HashSet<string>();
-        this.functions = new Dictionary<string, string[]>();
-    }
-
-    public bool IsDefined(string variable)
-    {
-        return this.variables.Contains(variable) 
-            || this.parent != null && this.parent.IsDefined(variable);
-    }
-    
-    public bool IsDefined(string function, int args)
-    {
-        return this.functions.ContainsKey(function) && this.functions[function].Length == args
-            || this.parent != null && this.parent.IsDefined(function, args);
+        variables = new Dictionary<string, Expression>();
+        functions = new Dictionary<string, HashSet<string[]>>();
     }
     
     public bool Define(string variable)
     {
-        return this.variables.Add(variable);
+        if (!variables.ContainsKey(variable))
+        {
+            variables.Add(variable, null);
+            return true;
+        }
+        
+        return false;
     }
-    
+
     public bool Define(string function, string[] args)
     {
-        // if (!this.functions.ContainsKey(function))
-        //     return this.functions.TryAdd(function, args);
-        // else if (this.functions[function].Length != args.Length)
-        //     return this.functions.TryAdd(function, args);
-        // else
-        //     return false;
-
-        if (this.functions.ContainsKey(function) 
-            && this.functions[function].Length == args.Length)
-                return false;
-
-        this.functions[function] = args;
-        return true;
+        if (!functions.ContainsKey(function) || functions[function].Contains(args))
+            return functions[function].Add(args);
+        else
+            return false;
     }
 
-    public Context CreateChildContext()
+    public bool IsDefined(string variable)
     {
-        return new Context(this);
+        return variables.ContainsKey(variable) 
+            || parent != null && parent.IsDefined(variable);
     }
-}
-
-public abstract class Node
-{
-    public abstract bool Validate(Context context);
-}
-
-public class CompilerProgram : Node
-{
-    public List<Statement> Statements;
-
-    public override bool Validate(Context context)
-    {
-        foreach (var statement in Statements)
-            if (!statement.Validate(context))
-                return false;
-
-        return true;
-    }
-}
-
-public abstract class Statement : Node
-{
-
-}
-
-public class VarDecl : Statement
-{
-    public string Identifier;
     
-    public Expression Expr;
-
-    public override bool Validate(Context context)
+    public bool IsDefined(string function, Expression[] args)
     {
-        if (!Expr.Validate(context))
-            return false;
+        if (functions.ContainsKey(function)){
+            foreach (var ar in functions[function]){
+                if (ar.Length == args.Length)
+                    return true;
+            }
+        }
         
-        if (!context.Define(Identifier))
-            return false;
-        
-        return true;
+        return parent != null && parent.IsDefined(function, args);
+    }
+
+    public Expression GetValue(string variable)
+    {
+        return variables[variable];
     }
 }
 
-public class FuncDef : Statement
+public enum ExpressionType 
 {
-    public string Identifier;
+    String,
+    Bool,
+    Numeric,
+    Void
+}
 
-    public List<string> Args;
+public class CompilerProgram : Expression
+{
+    public Expression Line;
 
-    public Expression Body;
+    public CompilerProgram() : base("")
+    {
+    }
 
     public override bool Validate(Context context)
     {
-        Context innerContext = context.CreateChildContext();
-
-        foreach (var arg in this.Args)
-            innerContext.Define(arg);
-
-        return Body.Validate(innerContext) && context.Define(Identifier, Args.ToArray());
+        return Line.Validate(context);
+    }
+    
+    public override void Evaluate(Context context)
+    {
+        Line.Evaluate(context);
+        Value = Line.Value;
+        Type = ExpressionType.Void;
     }
 }
 
-public class Print : Statement
+public class Print : Expression
 {
     public Expression Expr;
+
+    public Print(Expression expression) : base("")
+    {
+        Expr = expression;
+    }
 
     public override bool Validate(Context context)
     {
         return Expr.Validate(context);
     }
-}
 
-public abstract class Expression : Node
-{
-    
-}
-
-public abstract class BynaryExpression : Expression
-{
-    public Operator Op;
-
-    public Expression Left;
-    
-    public Expression Right;
-
-    public override bool Validate(Context context)
+    public override void Evaluate(Context context)
     {
-        return Left.Validate(context) && Right.Validate(context);
+        Expr.Evaluate(context);
+        Value = Expr.Value;
+        Type = ExpressionType.Void;
     }
 }
 
-public enum Operator
-{
-    Add,
-    Sub,
-    Mult,
-    Div,
-    Mod
-}
-
-
-public abstract class AtomicExpression : Expression
-{
-    
-}
-
-public class FuncCall : AtomicExpression
+public class FuncDef : Expression
 {
     public string Identifier;
 
-    public List<Expression> Args;
+    public string[] Args;
+
+    public Expression Body;
+
+    public FuncDef(string identifier, List<string> args, Expression body) : base("")
+    {
+        Identifier = identifier;
+        
+        Args = new string[args.Count];
+        for (int i = 0; i < args.Count; i++)
+            Args[i] = args[i];
+
+        Body = body;
+    }
 
     public override bool Validate(Context context)
     {
-        foreach (var expr in Args)
-            if (!expr.Validate(context))
+        Context innerContext = new Context(context);
+
+        foreach (string arg in Args)
+            if (!innerContext.Define(arg))
                 return false;
-                
-        return context.IsDefined(Identifier, Args.Count);
-    }
-}
 
-public class Variable : AtomicExpression
-{
-    public string Identifier;
+        if (!Body.Validate(innerContext) || context.Define(Identifier, Args))
+            return false;
 
-    public override bool Validate(Context context)
-    {
-        return context.IsDefined(Identifier);
-    }
-}
-
-public class Number : AtomicExpression
-{
-    public string Value;
-
-    public override bool Validate(Context context)
-    {
         return true;
+    }
+
+    public override void Evaluate(Context context)
+    {
+        Value = "";
+        Type = ExpressionType.Void;
+    }
+}
+
+public class LetIn : Expression
+{
+    public Dictionary<string, Expression> Variables;
+    
+    public Expression Body;
+
+    public LetIn(Dictionary<string, Expression> variables, Expression body) : base("")
+    {
+        Variables = new Dictionary<string, Expression>();
+        foreach (string variable in variables.Keys)
+            Variables[variable] = variables[variable];
+
+        Body = body;
+    }
+
+    public override bool Validate(Context context)
+    {
+        Context innerContext = new Context(context);
+
+        foreach (string variable in Variables.Keys){
+            if (!Variables[variable].Validate(context))
+                return false;
+            if (!innerContext.Define(variable))
+                return false;
+        }
+
+        if (!Body.Validate(innerContext))
+            return false;
+        
+        return true;
+    }
+
+    public override void Evaluate(Context context)
+    {        
+        Body.Evaluate(context);
+        Value = Body.Value;
+        Type = Body.Type;
+    }
+}
+
+public class IfElse : Expression
+{
+    public Expression Condition;
+
+    public Expression Positive;
+
+    public Expression Negative;
+
+    public IfElse(Expression condition, Expression positive, Expression negative) : base("")
+    {
+        Condition = condition;
+        Positive = positive;
+        Negative = negative;
+    }
+
+    public override bool Validate(Context context)
+    {
+        return Condition.Validate(context) && Positive.Validate(context) && Negative.Validate(context);
+    }
+
+    public override void Evaluate(Context context)
+    {
+        Condition.Evaluate(context);
+
+        if (bool.Parse(Condition.Value)){
+            Positive.Evaluate(context);
+            Value = Positive.Value;
+        }
+        else{
+            Negative.Evaluate(context);
+            Value = Negative.Value;
+        }
     }
 }
