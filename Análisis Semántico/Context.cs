@@ -15,7 +15,7 @@ public class Context
     
     public bool Define(string variable)
     {
-        if (!variables.ContainsKey(variable))
+        if (!IsDefined(variable))
         {
             variables.Add(variable, null);
             return true;
@@ -26,12 +26,15 @@ public class Context
 
     public bool Define(string function, string[] args, Expression body)
     {
-        if (!functions.ContainsKey(function)){
+        if (!IsDefined(function)){
             functions[function] = new Dictionary<string[], Expression>();
         }
-        if (!functions[function].ContainsKey(args)){
+        if (functions.ContainsKey(function) && !functions[function].ContainsKey(args)){
             functions[function].Add(args, body);
             return true;
+        }
+        else if (parent != null){
+            return parent.Define(function, args, body);
         }
         else
             return false;
