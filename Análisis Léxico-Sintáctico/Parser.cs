@@ -56,32 +56,32 @@ public class Parser
     private Expression Expression()
     {
         int pos = index;
-        Expression node;
+        Expression expr;
         if (Match(TokenValues.Grammar["print"])){ // Expr -> Print
-            node = Print();
-            if (node != null) return node;
+            expr = Print();
+            if (expr != null) return expr;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["function"])){ // Expr -> Func
-            node = Function();
-            if (node != null) return node;
+            expr = Function();
+            if (expr != null) return expr;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["let"])){ // Expr -> LetIn
-            node = LetIn();
-            if (node != null) return node;
+            expr = LetIn();
+            if (expr != null) return expr;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["if"])){ // Expr -> IfElse
-            node = IfElse();
-            if (node != null) return node;
+            expr = IfElse();
+            if (expr != null) return expr;
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Expr -> (Expr)
-            node = Expression();
-            if (node != null  && Match(TokenValues.Grammar[")"])) return node;
-        }
-        // Expr -> Val
         Reset(pos);
-        node = Value();
-        if (node != null) return node;
-        else return null;
+        expr = Value(); // Expr -> Val
+        if (expr != null) 
+            return expr;
+        if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Expr -> (Expr)
+            expr = Expression();
+            if (expr != null  && Match(TokenValues.Grammar[")"])) return expr;
+        }
+        return null;
     }
     #endregion
 
@@ -112,19 +112,20 @@ public class Parser
         
         List<string> args = new List<string>();
         if (Match(TokenValues.Grammar["("])){
-            while (tokens[index].Type == TokenType.Identifier || tokens[index] == TokenValues.Grammar[","]){
-                if (tokens[index].Type == TokenType.Identifier){
-                    args.Add(tokens[index - 1].Value);
+            do{
+                if (tokens[index].Type == TokenType.Identifier)
+                    args.Add(tokens[index++].Value);
+                else if (tokens[index] == TokenValues.Grammar[","])
                     index++;
-                }
-                else if (tokens[index] == TokenValues.Grammar[","]){
-                    index++;
-                }
-            }
-            if (!Match(TokenValues.Grammar[")"]))
-                return null;
+                else 
+                    return null;
+            } while (tokens[index] != TokenValues.Grammar[")"]);
+            index++;
         }
 
+        if (!Match(TokenValues.Grammar["=>"]))
+            return null;
+            
         Expression body = Expression();
         if (body != null)
             return new FuncDef(id, args, body);
@@ -169,7 +170,7 @@ public class Parser
         // IfElse -> if (Bool) Expr else Expr
         if (Match(TokenValues.Grammar["("]))
         {
-            BooleanLiteral condition = (BooleanLiteral)Bool();
+            Expression condition = Bool();
             if (condition != null && Match(TokenValues.Grammar[")"]))
             {
                 Expression positive = Expression();
@@ -193,18 +194,19 @@ public class Parser
         Expression expr ;
 
         if (Match(TokenValues.Grammar["\""])){ // Val -> Str
+            index--;
             expr = StringExpression();
             if (expr != null) 
                 return expr;
         }
 
         Reset(pos);
-        expr = Bool(); // Val -> Bool
+        expr = NumericalExpression(); // Val -> NumExpr
         if (expr != null) 
             return expr;
 
         Reset(pos);
-        expr = NumericalExpression(); // Val -> NumExpr
+        expr = Bool(); // Val -> Bool
         if (expr != null) 
             return expr;
 
@@ -222,7 +224,10 @@ public class Parser
             Expression expr = Value();
             if (expr != null)
                 args.Add(expr);
+            if (tokens[index] == TokenValues.Grammar[","])
+                index++;
         } while (tokens[index] != TokenValues.Grammar[")"]);
+        index++;
 
         return new FuncCall(id, args);
     }
@@ -230,19 +235,8 @@ public class Parser
     #region Parsing Numerical Expressions
     private Expression NumericalExpression()
     {
-        // NumExpr -> Term X
-        Expression left = Term();
-
-        Expression expr;
-
-        if (left != null)
-        {
-            expr = X(left);
-            if (expr != null) 
-                return expr;
-        }
-
-        return null;
+        // NumExpr -> Term X Y
+        return Y(X(Term()));
     }
 
     private Expression Term()
@@ -250,7 +244,7 @@ public class Parser
         int pos = index;
         Expression term;
         if (MatchNumber()){ // Term -> int Y
-            term = Y(new Number(tokens[index].Value));
+            term = Y(new Number(tokens[index - 1].Value));
             if (term != null)
                 return term;
         }
@@ -275,6 +269,7 @@ public class Parser
             if (term != null)
                 return term;
         }
+        Reset(pos);
         return null;
     }
 
@@ -286,12 +281,12 @@ public class Parser
         if (Match(TokenValues.Grammar["+"])){ // X -> + NumExpr
             right = NumericalExpression();
             if (right != null)
-                return new BinaryExpression(left, Operator.Sum, Term());
+                return new BinaryExpression(left, Operator.Sum, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["-"])){ // X -> - NumExpr
             right = NumericalExpression();
             if (right != null)
-                return new BinaryExpression(left, Operator.Sub, Term());
+                return new BinaryExpression(left, Operator.Sub, right);
         }
 
         Reset(pos);
@@ -300,31 +295,28 @@ public class Parser
 
     private Expression Y(Expression left)
     {
-        if (left == null) 
-            return null;
-
         int pos = index;
         Expression right;
 
         if (Match(TokenValues.Grammar["*"])){ // Y -> * Term
             right = Term();
             if (right != null)
-                return new BinaryExpression(left, Operator.Mul, Term());
+                return new BinaryExpression(left, Operator.Mul, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["/"])){ // Y -> / Term
             right = Term();
             if (right != null)
-                return new BinaryExpression(left, Operator.Div, Term());
+                return new BinaryExpression(left, Operator.Div, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["%"])){ // Y -> % Term
             right = Term();
             if (right != null)
-                return new BinaryExpression(left, Operator.Mod, Term());
+                return new BinaryExpression(left, Operator.Mod, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["^"])){ // Y -> ^ Term
             right = Term();
             if (right != null)
-                return new BinaryExpression(left, Operator.Pow, Term());
+                return new BinaryExpression(left, Operator.Pow, right);
         }
 
         Reset(pos);

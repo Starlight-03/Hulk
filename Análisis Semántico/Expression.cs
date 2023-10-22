@@ -14,6 +14,148 @@ public abstract class Expression
     public abstract void Evaluate(Context context);
 }
 
+public enum ExpressionType 
+{
+    String,
+    Bool,
+    Numeric,
+    Void
+}
+
+public class Print : Expression
+{
+    public Expression Expr;
+
+    public Print(Expression expression) : base("")
+    {
+        Expr = expression;
+    }
+
+    public override bool Validate(Context context)
+    {
+        return Expr.Validate(context);
+    }
+
+    public override void Evaluate(Context context)
+    {
+        Expr.Evaluate(context);
+        Value = Expr.Value;
+        Type = ExpressionType.Void;
+    }
+}
+
+public class FuncDef : Expression
+{
+    public string Identifier;
+
+    public string[] Args;
+
+    public Expression Body;
+
+    public FuncDef(string identifier, List<string> args, Expression body) : base("")
+    {
+        Identifier = identifier;
+        
+        Args = new string[args.Count];
+        for (int i = 0; i < args.Count; i++)
+            Args[i] = args[i];
+
+        Body = body;
+    }
+
+    public override bool Validate(Context context)
+    {
+        Context innerContext = new Context(context);
+
+        foreach (string arg in Args)
+            if (!innerContext.Define(arg))
+                return false;
+
+        return Body.Validate(innerContext) && context.Define(Identifier, Args, Body);
+    }
+
+    public override void Evaluate(Context context)
+    {
+        Value = "";
+        Type = ExpressionType.Void;
+    }
+}
+
+public class LetIn : Expression
+{
+    public Dictionary<string, Expression> Variables;
+    
+    public Expression Body;
+
+    public LetIn(Dictionary<string, Expression> variables, Expression body) : base("")
+    {
+        Variables = new Dictionary<string, Expression>();
+        foreach (string variable in variables.Keys)
+            Variables[variable] = variables[variable];
+
+        Body = body;
+    }
+
+    public override bool Validate(Context context)
+    {
+        Context innerContext = new Context(context);
+
+        foreach (string variable in Variables.Keys){
+            if (!Variables[variable].Validate(context))
+                return false;
+            if (!innerContext.Define(variable))
+                return false;
+        }
+
+        if (!Body.Validate(innerContext))
+            return false;
+        
+        return true;
+    }
+
+    public override void Evaluate(Context context)
+    {        
+        Body.Evaluate(context);
+        Value = Body.Value;
+        Type = Body.Type;
+    }
+}
+
+public class IfElse : Expression
+{
+    public Expression Condition;
+
+    public Expression Positive;
+
+    public Expression Negative;
+
+    public IfElse(Expression condition, Expression positive, Expression negative) : base("")
+    {
+        Condition = condition;
+        Positive = positive;
+        Negative = negative;
+    }
+
+    public override bool Validate(Context context)
+    {
+        return Condition.Validate(context) && Positive.Validate(context) && Negative.Validate(context);
+    }
+
+    public override void Evaluate(Context context)
+    {
+        Condition.Evaluate(context);
+
+        if (bool.Parse(Condition.Value)){
+            Positive.Evaluate(context);
+            Value = Positive.Value;
+        }
+        else{
+            Negative.Evaluate(context);
+            Value = Negative.Value;
+        }
+    }
+}
+
 public class BinaryExpression : Expression
 {
     public Operator Op;
@@ -44,7 +186,8 @@ public class BinaryExpression : Expression
             case Operator.Sub: 
             case Operator.Mul: 
             case Operator.Div: 
-            case Operator.Mod:
+            case Operator.Mod: 
+            case Operator.Pow:
                 NumericOperation(); break;
             case Operator.And:
                 if (bool.Parse(Left.Value) && bool.Parse(Right.Value))
@@ -85,6 +228,9 @@ public class BinaryExpression : Expression
                 break;
             case Operator.Mod:
                 Value = (double.Parse(Left.Value) % double.Parse(Right.Value)).ToString();
+                break;
+            case Operator.Pow:
+                Value = Math.Pow(double.Parse(Left.Value), double.Parse(Right.Value)).ToString();
                 break;
         }
 
@@ -127,28 +273,59 @@ public abstract class AtomicExpression : Expression
     }
 }
 
-public class Function
+public class PredeterminedFunction : AtomicExpression
 {
-    public string Identifier;
+    public PredeterminedFunctions Function;
 
-    public Variable[] Args;
+    public Variable[] Variables;
 
-    public Context InnerContext;
-
-    public Expression Body;
-
-    public Function(string identifier, List<Variable> args, Context innerContext, Expression body)
+    public PredeterminedFunction(PredeterminedFunctions func, params Variable[] variables) : base("")
     {
-        Identifier = identifier;
-
-        Args = new Variable[args.Count];
-        for (int i = 0; i < args.Count; i++)
-            Args[i] = args[i];
-
-        InnerContext = innerContext;
-
-        Body = body;
+        Function = func;
+        
+        Variables = new Variable[variables.Length];
+        for (int i = 0; i < variables.Length; i++)
+            Variables[i] = variables[i];
     }
+
+    public override bool Validate(Context context)
+    {
+        foreach (Variable variable in Variables)
+            if (!variable.Validate(context))
+                return false;
+                
+        return true;
+    }
+
+    public override void Evaluate(Context context)
+    {
+        foreach (Variable variable in Variables)
+            variable.Evaluate(context);
+        
+        switch (Function)
+        {
+            case PredeterminedFunctions.sin:
+                Value = Math.Sin(double.Parse(Variables[0].Value)).ToString();
+                break;
+            case PredeterminedFunctions.cos:
+                Value = Math.Cos(double.Parse(Variables[0].Value)).ToString();
+                break;
+            case PredeterminedFunctions.log:
+                Value = Math.Log(double.Parse(Variables[1].Value), double.Parse(Variables[0].Value)).ToString();
+                break;
+            case PredeterminedFunctions.ln:
+                Value = Math.Log(double.Parse(Variables[0].Value)).ToString();
+                break;
+        }
+    }
+}
+
+public enum PredeterminedFunctions
+{
+    sin,
+    cos,
+    log,
+    ln
 }
 
 public class FuncCall : Expression
@@ -172,15 +349,27 @@ public class FuncCall : Expression
             if (!arg.Validate(context))
                 return false;
 
-        if (!context.IsDefined(Identifier, Args))
-            return false;
-
-        return true;
+        return context.IsDefined(Identifier, Args);
     }
 
     public override void Evaluate(Context context)
     {
-        
+        Context innerContext = new Context(context);
+
+        foreach (var args in context.GetFunction(Identifier).Keys)
+        {
+            if (args.Length == Args.Length)
+            {
+                for (int i = 0; i < Args.Length; i++)
+                {
+                    if (innerContext.Define(args[i]))
+                        innerContext.SetValue(args[i], Args[i]);
+                }
+                Expression body = context.GetBody(Identifier, args);
+                body.Evaluate(innerContext);
+                Value = body.Value;
+            }
+        }
     }
 }
 
