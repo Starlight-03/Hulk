@@ -1,10 +1,17 @@
 public abstract class Error
 {
     protected ErrorType type;
-    
-    public void Throw(string info)
+
+    public string Info { get; set; }
+
+    public Error()
     {
-        Console.WriteLine("! {0} ERROR: {1}", type, info);
+        Info = "";
+    }
+    
+    public void Show()
+    {
+        Console.WriteLine("! {0} ERROR: {1}", type, Info);
     }
 }
 
@@ -19,7 +26,7 @@ public class LexError : Error
 {
     public LexError() : base()
     {
-        this.type = ErrorType.LEXICAL;
+        type = ErrorType.LEXICAL;
     }
 }
 
@@ -27,7 +34,7 @@ public class SyntaxError : Error
 {
     public SyntaxError() : base()
     {
-        this.type = ErrorType.SYNTAX;
+        type = ErrorType.SYNTAX;
     }
 }
 
@@ -35,6 +42,6 @@ public class SemanticError : Error
 {
     public SemanticError() : base()
     {
-        this.type = ErrorType.SEMANTIC;
+        type = ErrorType.SEMANTIC;
     }
 }

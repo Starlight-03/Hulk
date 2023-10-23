@@ -40,6 +40,16 @@ public class Context
             return false;
     }
 
+    public void Undefine(string function, string[] args)
+    {
+        if (functions.ContainsKey(function) && functions[function].ContainsKey(args)){
+            functions[function].Remove(args);
+        }
+        else if (parent != null){
+            parent.Undefine(function, args);
+        }
+    }
+
     public bool IsDefined(string variable)
     {
         return variables.ContainsKey(variable) 

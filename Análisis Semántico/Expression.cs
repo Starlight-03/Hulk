@@ -73,7 +73,13 @@ public class FuncDef : Expression
             if (!innerContext.Define(arg))
                 return false;
 
-        return Body.Validate(innerContext) && context.Define(Identifier, Args, Body);
+        if (context.Define(Identifier, Args, Body)){
+            if (Body.Validate(innerContext))
+                return true;
+            else
+                context.Undefine(Identifier, Args);
+        }
+        return false;
     }
 
     public override void Evaluate(Context context)
@@ -87,6 +93,8 @@ public class LetIn : Expression
     
     public Expression Body;
 
+    public Context innerContext;
+
     public LetIn(Dictionary<string, Expression> variables, Expression body) : base("")
     {
         Variables = new Dictionary<string, Expression>();
@@ -98,13 +106,14 @@ public class LetIn : Expression
 
     public override bool Validate(Context context)
     {
-        Context innerContext = new Context(context);
+        innerContext = new Context(context);
 
         foreach (string variable in Variables.Keys){
             if (!Variables[variable].Validate(context))
                 return false;
             if (!innerContext.Define(variable))
                 return false;
+            innerContext.SetValue(variable, Variables[variable]);
         }
 
         if (!Body.Validate(innerContext))
@@ -115,7 +124,7 @@ public class LetIn : Expression
 
     public override void Evaluate(Context context)
     {        
-        Body.Evaluate(context);
+        Body.Evaluate(innerContext);
         Value = Body.Value;
         Type = Body.Type;
     }

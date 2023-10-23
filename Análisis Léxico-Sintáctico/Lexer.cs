@@ -1,6 +1,6 @@
 public class Lexer
 {
-    private LexError lexError;
+    public LexError Lex;
 
     private List<Token> tokens;
 
@@ -12,8 +12,8 @@ public class Lexer
     
     public Lexer(string line)
     {
-        this.lexError = new LexError();
-        this.tokens = new List<Token>();
+        Lex = new LexError();
+        tokens = new List<Token>();
         this.line = line;
         i = 0;
     }
@@ -34,11 +34,11 @@ public class Lexer
                 this.tokens.Add(GetToken());
         }
         
-        foreach (Token token in this.tokens)
+        foreach (Token token in tokens)
             if (token == null)
                 return null;
 
-        return this.tokens;
+        return tokens;
     }
 
     #region Lex Tools
@@ -117,7 +117,7 @@ public class Lexer
                 return TokenValues.Grammar[token];
             else
             {
-                lexError.Throw($"{token} is not a valid token");
+                Lex.Info = $"\'{token}\' is not a valid token";
                 return null;
             }
         }
@@ -141,7 +141,7 @@ public class Lexer
             }
             else if (point && (Look() == ',' || Look() == '.')){
                 token += Look();
-                lexError.Throw($"{token} is not a valid token");
+                Lex.Info = $"\'{token}\' is not a valid token";
                 break;
             }
             else if (IsWhiteSpaceOrPunctuationOrSymbol(Look())){
@@ -150,7 +150,7 @@ public class Lexer
             }
             else{
                 token += Look();
-                lexError.Throw($"{token} is not a valid token");
+                Lex.Info = $"\'{token}\' is not a valid token";
                 break;
             }
         }
@@ -180,7 +180,7 @@ public class Lexer
             }
         }
 
-        lexError.Throw($"{token} is not a valid token");
+        Lex.Info = $"\'{token}\' is not a valid token";
         return null;
     }
 
@@ -197,7 +197,7 @@ public class Lexer
                 str += Look();
         }
 
-        lexError.Throw("String expression missing closure");
+        Lex.Info = "String expression missing closure";
         return null;
     }
     #endregion

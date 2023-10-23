@@ -16,8 +16,9 @@ public class Parser
 
     public Expression Parse()
     {
-        if (tokens[tokens.Count - 1] == TokenValues.Grammar[";"])
-            return Expression();
+        Expression expression = Expression();
+        if (expression != null && Match(TokenValues.Grammar[";"]) && index == tokens.Count)
+            return expression;
         else
             return null;
     }
@@ -139,17 +140,19 @@ public class Parser
     {
         // LetIn -> let Var = Val in Expr
         Dictionary<string, Expression> variables = new Dictionary<string, Expression>();
-        while (MatchIdentifier())
+        while (tokens[index].Type == TokenType.Identifier)
         {
-            string id = tokens[index - 1].Value;
-            if (Match(TokenValues.Grammar["="]))
-            {
-                Expression expr = Value();
-                if (expr != null) 
-                    variables.Add(id, expr);
-                else 
-                    return null;
-            }
+            string id = tokens[index++].Value;
+            
+            if (!Match(TokenValues.Grammar["="]))
+                return null;
+            
+            Expression expr = Value();
+            if (expr != null) 
+                variables.Add(id, expr);
+            else 
+                return null;
+            
             if (tokens[index] == TokenValues.Grammar[","])
                 index++;
         }
@@ -191,25 +194,48 @@ public class Parser
     private Expression Value()
     {
         int pos = index;
-        Expression expr ;
+        Expression expr;
 
-        if (Match(TokenValues.Grammar["\""])){ // Val -> Str
-            index--;
+        if (Match(TokenValues.Grammar["\""]) && Reset(pos)){ // Val -> " StrExpr "
             expr = StringExpression();
-            if (expr != null) 
+            if (expr != null)
                 return expr;
         }
-
+        if (Reset(pos) && MatchNumber() && Reset(pos) 
+            || Match(TokenValues.Grammar["("]) && Reset(pos)){ // Val -> Bool: NumExpr Compar NumExpr | NumExpr
+            for (int i = index; i < tokens.Count; i++){
+                if (tokens[i] == TokenValues.Grammar["<"]
+                || Reset(pos) && tokens[i] == TokenValues.Grammar["<="]
+                || Reset(pos) && tokens[i] == TokenValues.Grammar[">"]
+                || Reset(pos) && tokens[i] == TokenValues.Grammar[">="]
+                || Reset(pos) && tokens[i] == TokenValues.Grammar["=="]
+                || Reset(pos) && tokens[i] == TokenValues.Grammar["!="]){
+                    expr = OpBool(OpComp(NumericalExpression()));
+                    if (expr != null)
+                        return expr;
+                }
+            }
+            Reset(pos);
+            expr = NumericalExpression();
+            if (expr != null)
+                return expr;
+        }
+        if (Reset(pos) && MatchIdentifier()){ // Val -> FuncCall X Y Concat | Var X Y Concat
+            if (Match(TokenValues.Grammar["("])){
+                expr = Concatenation(Y(X(FuncCall())));
+                if (expr != null)
+                    return expr;
+            }
+            Reset(pos);
+            expr = Concatenation(Y(X(new Variable(tokens[index++].Value))));
+            if (expr != null)
+                return expr;
+        }
         Reset(pos);
-        expr = NumericalExpression(); // Val -> NumExpr
-        if (expr != null) 
+        expr = Bool();
+        if (expr != null)
             return expr;
-
         Reset(pos);
-        expr = Bool(); // Val -> Bool
-        if (expr != null) 
-            return expr;
-
         return null;
     }
 
@@ -264,7 +290,6 @@ public class Parser
                 return term;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["let"])){ // Term -> LetIn Y
-            index--;
             term = Y(LetIn());
             if (term != null)
                 return term;
@@ -328,31 +353,40 @@ public class Parser
     private Expression Bool()
     {
         int pos = index;
-        if (Match(TokenValues.Grammar["true"])){ // Bool -> true OpBool
-            return OpBool(new BooleanLiteral("true"));
-        }
-        if (Reset(pos) && Match(TokenValues.Grammar["false"])){ // Bool -> false OpBool
-            return OpBool(new BooleanLiteral("false"));
+        Expression expr;
+
+        if (Match(TokenValues.Grammar["true"]) 
+        || Reset(pos) && Match(TokenValues.Grammar["false"])){ // Bool -> BoolLit OpBool
+            expr = OpBool(new BooleanLiteral(tokens[index - 1].Value));
+            if (expr != null)
+                return expr;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Bool -> (Bool) OpBool
-            Expression boolean = Bool();
-            if (boolean != null && Match(TokenValues.Grammar[")"]))
-                return OpBool(boolean);
+            expr = Bool();
+            if (expr != null && Match(TokenValues.Grammar[")"]))
+                return OpBool(expr);
         }
-        if (Reset(pos) && MatchIdentifier() && Match(TokenValues.Grammar["("])){ // Bool -> FuncCall OpBool
-            return OpBool(FuncCall());
+        if (Reset(pos) && MatchIdentifier() && Match(TokenValues.Grammar["("])){ // Bool -> FuncCall X Y OpComp OpBool
+            expr = OpBool(OpComp(Y(X(FuncCall()))));
+            if (expr != null)
+                return expr;
         }
-        if (Reset(pos) && MatchIdentifier()){ // Bool -> Var OpBool
-            return OpBool(new Variable(tokens[index - 1].Value));
+        if (Reset(pos) && MatchIdentifier()){ // Bool -> Var X Y OpComp OpBool
+            expr = OpBool(OpComp(Y(X(new Variable(tokens[index - 1].Value)))));
+            if (expr != null)
+                return expr;
         }
         if (Reset(pos) && Match(TokenValues.Grammar["!"])){ // Bool -> !Bool OpBool
-            return OpBool(new NoBool(Bool()));
+            expr = OpBool(new NoBool(Bool()));
+            if (expr != null)
+                return expr;
         }
-        Reset(pos);
-        Expression compar = OpComp(NumericalExpression()); // Bool -> NumExpr OpComp OpBool
-        if (compar != null)
-            return OpBool(compar);
-        
+        if (Reset(pos)){ // Bool -> NumExpr OpComp OpBool
+            expr = OpComp(NumericalExpression());
+            if (expr != null)
+                return OpBool(expr);
+        }
+
         return null;
     }
 
@@ -362,24 +396,37 @@ public class Parser
             return null;
 
         int pos = index;
+        Expression right;
 
         if (Match(TokenValues.Grammar["<"])){ // OpComp -> < NumExpr
-            return new BinaryExpression(left, Operator.Minor, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.Minor, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["<="])){ // OpComp -> <= NumExpr
-            return new BinaryExpression(left, Operator.MinorEqual, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.MinorEqual, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar[">"])){ // OpComp -> > NumExpr
-            return new BinaryExpression(left, Operator.Major, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.Major, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar[">="])){ // OpComp -> >= NumExpr
-            return new BinaryExpression(left, Operator.MajorEqual, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.MajorEqual, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["=="])){ // OpComp -> == NumExpr
-            return new BinaryExpression(left, Operator.Equals, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.Equals, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["!="])){ // OpComp -> != NumExpr
-            return new BinaryExpression(left, Operator.NotEqual, NumericalExpression());
+            right = NumericalExpression();
+            if (right != null)
+                return new BinaryExpression(left, Operator.NotEqual, right);
         }
         return null;
     }
@@ -390,11 +437,16 @@ public class Parser
             return null;
 
         int pos = index;
+        Expression right;
         if (Match(TokenValues.Grammar["&"])){ // OpBool -> & Bool
-            return new BinaryExpression(left, Operator.And, Bool());
+            right = Bool();
+            if (right != null)
+                return new BinaryExpression(left, Operator.And, right);
         }
         if (Reset(pos) && Match(TokenValues.Grammar["|"])){ // OpBool -> | Bool
-            return new BinaryExpression(left, Operator.And, Bool());
+            right = Bool();
+            if (right != null)
+                return new BinaryExpression(left, Operator.And, right);
         }
 
         Reset(pos);
@@ -406,7 +458,9 @@ public class Parser
     private Expression StringExpression()
     {
         if (MatchString()){ // StrExpr -> String Conc
-            return Concatenation(new StringLiteral(tokens[index - 2].Value));
+            Expression str = Concatenation(new StringLiteral(tokens[index - 2].Value));
+            if (str != null)
+                return str;
         }
 
         return null;
@@ -418,9 +472,10 @@ public class Parser
             return null;
         
         int pos = index;
-        if (Match(TokenValues.Grammar["@"])){ // Conc -> @ Val
+
+        if (Match(TokenValues.Grammar["@"])) // Conc -> @ Val
             return new BinaryExpression(left, Operator.Concat, Value());
-        }
+        
         Reset(pos);
         return left; // Conc -> e
     }

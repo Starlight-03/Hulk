@@ -107,8 +107,12 @@ public class FuncCall : AtomicExpression
             {
                 for (int i = 0; i < Args.Length; i++)
                 {
-                    if (innerContext.Define(args[i]))
-                        innerContext.SetValue(args[i], Args[i]);
+                    if (innerContext.Define(args[i])){
+                        if (Args[i].GetType() == new Variable("").GetType())
+                            innerContext.SetValue(args[i], innerContext.GetValue(args[i]));
+                        else
+                            innerContext.SetValue(args[i], Args[i]);
+                    }
                 }
                 Expression body = context.GetBody(Identifier, args);
                 body.Evaluate(innerContext);

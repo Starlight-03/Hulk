@@ -7,7 +7,8 @@
         while (true)
         {
             Console.Write("> ");
-            string line = Console.ReadLine();
+            // string line = Console.ReadLine();
+            string line = "function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;";
 
             if (line == "")
                 break;
@@ -15,8 +16,10 @@
             Lexer lexer = new Lexer(line);
             List<Token> tokens = lexer.GetTokens();
             
-            if (tokens == null)
-                break;
+            if (tokens == null){
+                lexer.Lex.Show();
+                continue;
+            }
 
             Parser parser = new Parser(tokens);
             Expression expression = parser.Parse();
