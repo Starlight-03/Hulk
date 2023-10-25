@@ -4,28 +4,26 @@ public class Token
 
     public TokenType Type { get; private set; }
 
-    public Token(string value, TokenType key)
+    public Token(string value, TokenType type)
     {
-        this.Value = value;
-        this.Type = key;
+        Value = value;
+        Type = type;
     }
-}
 
-public enum TokenType
-{
-    Identifier,
-    Keyword,
-    Separator,
-    Operator,
-    Expression,
-    NumericLiteral,
-    StringLiteral,
-    BooleanLiteral
-}
+    public static Token GetToken(string token)
+    {
+        if (TokenValues.ContainsKey(token))
+            return TokenValues[token];
+        else
+            return TokenValues["null"];
+    }
 
-public static class TokenValues
-{
-    public static Dictionary<string, Token> Grammar = new Dictionary<string, Token>()
+    public static bool IsToken(string token)
+    {
+        return TokenValues.ContainsKey(token);
+    }
+
+    private static Dictionary<string, Token> TokenValues = new Dictionary<string, Token>()
     {
         {"+", new Token("+", TokenType.Operator)},
         {"-", new Token("-", TokenType.Operator)},
@@ -57,6 +55,20 @@ public static class TokenValues
         {"if", new Token("if", TokenType.Keyword)},
         {"else", new Token("else", TokenType.Keyword)},
         {"true", new Token("true", TokenType.BooleanLiteral)},
-        {"false", new Token("false", TokenType.BooleanLiteral)}
+        {"false", new Token("false", TokenType.BooleanLiteral)},
+        {"null", new Token("", TokenType.Null)}
     };
+}
+
+public enum TokenType
+{
+    Identifier,
+    Keyword,
+    Separator,
+    Operator,
+    Expression,
+    NumericLiteral,
+    StringLiteral,
+    BooleanLiteral,
+    Null
 }

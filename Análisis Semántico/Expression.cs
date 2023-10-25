@@ -1,11 +1,14 @@
 public abstract class Expression
 {
-    public string Value;
+    public SemanticError Semantic { get; protected set; }
 
-    public ExpressionType Type;
+    public string Value { get; protected set; }
+
+    public ExpressionType Type { get; protected set; }
 
     public Expression(string value)
     {
+        Semantic = new SemanticError();
         Value = value;
     }
 

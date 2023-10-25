@@ -2,34 +2,56 @@
 {
     private static void Main(string[] args)
     {
-        Context context = InitializeGlobalContext();
-
-        while (true)
-        {
+        Context globalContext = InitializeGlobalContext();
+        while (true){
             Console.Write("> ");
             // string line = Console.ReadLine();
-            string line = "function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;";
-
+            string line = "function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;"; Console.WriteLine(line);
             if (line == "")
                 break;
             
-            Lexer lexer = new Lexer(line);
-            List<Token> tokens = lexer.GetTokens();
-            
-            if (tokens == null){
+            var lexer = new Lexer(line);
+            if (lexer.Tokens == null){
                 lexer.Lex.Show();
                 continue;
             }
 
-            Parser parser = new Parser(tokens);
-            Expression expression = parser.Parse();
-
-            if (expression != null && expression.Validate(context))
-            {
-                expression.Evaluate(context);
-                if (expression.Value != "")
-                    Console.WriteLine(expression.Value);
+            var parser = new Parser(lexer.Tokens);
+            if (parser.Expr == null){
+                parser.Syntax.Show();
+                continue;
             }
+
+            var AST = new AbstractSintaxisTree(parser.Expr, globalContext);
+            if (!AST.Valid){
+                AST.Semantic.Show();
+                continue;
+            }
+
+            if (AST.Value != "")
+                Console.WriteLine(parser.Expr.Value);
+
+            Console.Write("> ");
+            line = "fib(5);"; Console.WriteLine(line);
+            if (line == "")
+                break;
+            lexer = new Lexer(line);
+            if (lexer.Tokens == null){
+                lexer.Lex.Show();
+                continue;
+            }
+            parser = new Parser(lexer.Tokens);
+            if (parser.Expr == null){
+                parser.Syntax.Show();
+                continue;
+            }
+            AST = new AbstractSintaxisTree(parser.Expr, globalContext);
+            if (!AST.Valid){
+                AST.Semantic.Show();
+                continue;
+            }
+            if (AST.Value != "")
+                Console.WriteLine(parser.Expr.Value);
         }
     }
 

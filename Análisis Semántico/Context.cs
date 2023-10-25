@@ -1,3 +1,35 @@
+public class AbstractSintaxisTree
+{
+    public SemanticError Semantic { get; private set; }
+
+    public string Value { get; private set; }
+
+    public bool Valid { get; private set; }
+
+    private readonly Expression expr;
+
+    private readonly Context context;
+
+    public AbstractSintaxisTree(Expression expr, Context context)
+    {
+        Semantic = new SemanticError();
+        Value = "";
+        Valid = false;
+        this.expr = expr;
+        this.context = context;
+        Evaluate();
+    }
+
+    private void Evaluate()
+    {
+        if (expr.Validate(context)){
+            Valid = true;
+            expr.Evaluate(context);
+            Value = expr.Value;
+        }
+    }
+}
+
 public class Context
 {
     private Context parent;
@@ -15,7 +47,7 @@ public class Context
     
     public bool Define(string variable)
     {
-        if (!IsDefined(variable))
+        if (!variables.ContainsKey(variable))
         {
             variables.Add(variable, null);
             return true;

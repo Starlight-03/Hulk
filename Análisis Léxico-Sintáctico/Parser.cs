@@ -1,7 +1,9 @@
 public class Parser
 {
     // El parser revisa la semántica del código, la evalúa y devuelve un árbol de derivación
-    private SyntaxError syntaxError;
+    public SyntaxError Syntax { get; private set; }
+
+    public Expression Expr { get; private set; }
     
     private readonly List<Token> tokens;
     
@@ -9,41 +11,39 @@ public class Parser
     
     public Parser(List<Token> tokens)
     {
-        this.syntaxError = new SyntaxError();
+        Syntax = new SyntaxError();
         this.tokens = tokens;
-        this.index = 0;
+        index = 0;
+        Expr = Parse();
     }
 
-    public Expression Parse()
+    private Expression Parse()
     {
-        Expression expression = Expression();
-        if (expression != null && Match(TokenValues.Grammar[";"]) && index == tokens.Count)
-            return expression;
-        else
-            return null;
+        Expr = Expression();
+        if (Expr != null){
+            if (index == tokens.Count - 1 && Match(Token.GetToken(";")))
+                return Expr;
+            else
+                Syntax.Info = "Missing \'closing semicolon\'.";
+        }
+        return null;
     }
 
     #region Parsing Tools
     private bool Match(Token token)
     {
-        return tokens[index++] == token;
+        if (index < tokens.Count)
+            return tokens[index++] == token;
+        else
+            return false;
     }
 
-    private bool MatchNumber()
+    private bool Match(TokenType type)
     {
-        return tokens[index++].Type == TokenType.NumericLiteral;
-    }
-
-    private bool MatchString()
-    {
-        return Match(TokenValues.Grammar["\""])
-            && tokens[index++].Type == TokenType.StringLiteral
-            && Match(TokenValues.Grammar["\""]);
-    }
-
-    private bool MatchIdentifier()
-    {
-        return tokens[index++].Type == TokenType.Identifier;
+        if (index < tokens.Count)
+            return tokens[index++].Type == type;
+        else
+            return false;
     }
 
     private bool Reset(int pos)
@@ -57,186 +57,176 @@ public class Parser
     private Expression Expression()
     {
         int pos = index;
-        Expression expr;
-        if (Match(TokenValues.Grammar["print"])){ // Expr -> Print
-            expr = Print();
-            if (expr != null) return expr;
+        if (Match(Token.GetToken("print"))){ // Expr -> Print
+            return Print();
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["function"])){ // Expr -> Func
-            expr = Function();
-            if (expr != null) return expr;
+        if (Reset(pos) && Match(Token.GetToken("function"))){ // Expr -> Func
+            return Function();
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["let"])){ // Expr -> LetIn
-            expr = LetIn();
-            if (expr != null) return expr;
+        if (Reset(pos) && Match(Token.GetToken("let"))){ // Expr -> LetIn
+            return LetIn();
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["if"])){ // Expr -> IfElse
-            expr = IfElse();
-            if (expr != null) return expr;
+        if (Reset(pos) && Match(Token.GetToken("if"))){ // Expr -> IfElse
+            return IfElse();
         }
         Reset(pos);
-        expr = Value(); // Expr -> Val
+        Expression expr = Value(); // Expr -> Val
         if (expr != null) 
             return expr;
-        if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Expr -> (Expr)
+        if (Reset(pos) && Match(Token.GetToken("("))){ // Expr -> (Expr)
             expr = Expression();
-            if (expr != null  && Match(TokenValues.Grammar[")"])) return expr;
+            if (expr != null){
+                if (Match(Token.GetToken(")")))
+                    return expr;
+                Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.";
+            }
+            Syntax.Info = "Invalid expression after \'opening parenthesis\'.";
         }
+        Syntax.Info = "Invalid expression.";
         return null;
     }
-    #endregion
-
-    #region Parsing Print
+    
     private Expression Print()
     {
         // Func -> print(Expr)
-        if (Match(TokenValues.Grammar["("]))
-        {
+        if (Match(Token.GetToken("("))){
             Expression expr = Expression();
-            if (expr != null  && Match(TokenValues.Grammar[")"]))
+            if (expr != null  && Match(Token.GetToken(")")))
                 return new Print(expr);
+            else 
+                Syntax.Info = "Invalid expression in \'print\' expression.";
         }
+        else 
+            Syntax.Info = "Missing \'opening parenthesis\' after \'print\' keyword in \'print\' expression.";
         
         return null;
     }
-    #endregion
-
-    #region Parsing Function
+    
     private Expression Function()
     {
         // Func -> function Id(args) => Expr
         string id;
-        if (MatchIdentifier())
-            id = tokens[index - 1].Value;
-        else
+        if (Match(TokenType.Identifier)) id = tokens[index - 1].Value;
+        else{
+            Syntax.Info = $"Invalid token \'{tokens[index - 1].Value}\' in \'function definition\' expression.";
             return null;
-        
-        List<string> args = new List<string>();
-        if (Match(TokenValues.Grammar["("])){
-            do{
-                if (tokens[index].Type == TokenType.Identifier)
-                    args.Add(tokens[index++].Value);
-                else if (tokens[index] == TokenValues.Grammar[","])
-                    index++;
-                else 
-                    return null;
-            } while (tokens[index] != TokenValues.Grammar[")"]);
-            index++;
         }
-
-        if (!Match(TokenValues.Grammar["=>"]))
+        List<string> args = new List<string>();
+        if (Match(Token.GetToken("("))){
+            while (index < tokens.Count){
+                if (Match(Token.GetToken(")"))) break;
+                else index--;
+                if (Match(TokenType.Identifier)) args.Add(tokens[index - 1].Value);
+                else Syntax.Info = $"Missing identifier after \'{tokens[index - 2].Value}\' in \'function definition\' expression.";
+                if (!Match(Token.GetToken(","))) index--;
+            }
+            if (tokens[index - 1] != Token.GetToken(")")) Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\' in \'function definition\' expression.";
+        }
+        else Syntax.Info = $"Missing \'opening parenthesis\' after \'{tokens[index - 2].Value}\' in \'function definition\' expression.";
+        if (!Match(Token.GetToken("=>"))){
+            Syntax.Info = "Missing \'=>\' operator in \'function definition\' expression.";
             return null;
-            
+        }
         Expression body = Expression();
-        if (body != null)
-            return new FuncDef(id, args, body);
-        else
+        if (body != null) return new FuncDef(id, args, body);
+        else{
+            Syntax.Info = "Invalid expression in \'function body\' in \'function definition\' expression.";
             return null;
+        }
     }
-    #endregion
-
-    #region Parsing Let In
+    
     private Expression LetIn()
     {
         // LetIn -> let Var = Val in Expr
         Dictionary<string, Expression> variables = new Dictionary<string, Expression>();
-        while (tokens[index].Type == TokenType.Identifier)
-        {
-            string id = tokens[index++].Value;
-            
-            if (!Match(TokenValues.Grammar["="]))
+        while (Match(TokenType.Identifier)){
+            string id = tokens[index - 1].Value;
+            if (!Match(Token.GetToken("="))){
+                Syntax.Info = $"Missing \'assign operator\' after \'{id}\' in \'let-in\' expression.";
                 return null;
-            
+            }
             Expression expr = Value();
-            if (expr != null) 
-                variables.Add(id, expr);
-            else 
+            if (expr != null) variables.Add(id, expr);
+            else{
+                Syntax.Info = $"Invalid expression after \'{id}\' in \'let-in\' expression.";
                 return null;
-            
-            if (tokens[index] == TokenValues.Grammar[","])
-                index++;
+            }
+            if (!Match(Token.GetToken(","))){
+                index--; break;
+            }
         }
-
-        if (Match(TokenValues.Grammar["in"])){
+        if (Match(Token.GetToken("in"))){
             Expression expr = Expression();
             if (expr != null)
                 return new LetIn(variables, expr);
+            else
+                Syntax.Info = "Invalid expression after \'in\' in \'let-in\' expression.";
         }
-        
+        else if (Match(TokenType.Identifier))
+            Syntax.Info = $"Invalid token \'{tokens[index - 1].Value}\' in \'let-in\' expression.";
+        else
+            Syntax.Info = "Missing \'in\' keyword in \'let-in\' expression.";
         return null;
     }
-    #endregion
-
-    #region Parsing If Else
+    
     private Expression IfElse()
     {
         // IfElse -> if (Bool) Expr else Expr
-        if (Match(TokenValues.Grammar["("]))
-        {
+        if (Match(Token.GetToken("("))){
             Expression condition = Bool();
-            if (condition != null && Match(TokenValues.Grammar[")"]))
-            {
-                Expression positive = Expression();
-                if (positive != null && Match(TokenValues.Grammar["else"]))
-                {
-                    Expression negative = Expression();
-                    if (negative != null)
-                        return new IfElse(condition, positive, negative);
+            if (condition != null){
+                if (Match(Token.GetToken(")"))){
+                    Expression positive = Expression();
+                    if (positive != null){
+                        if (Match(Token.GetToken("else"))){
+                            Expression negative = Expression();
+                            if (negative != null)
+                                return new IfElse(condition, positive, negative);
+                            else
+                                Syntax.Info = "Invalid \'negative expression\' after \'else\' in \'if-else\' expression.";
+                        }
+                        else Syntax.Info = "Missing \'else\' keyword in \'if-else\' expression.";
+                    }
+                    else Syntax.Info = "Invalid \'positive expression\' in \'if-else\' expression.";
                 }
+                else Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\' in \'if-else\' expression.";
             }
+            else Syntax.Info = "Invalid \'condition expression\' after \'if\' in \'if-else\' expression.";
         }
+        else Syntax.Info = "Missing \'opening parenthesis\' after \'if\' in \'if-else\' expression.";
 
         return null;
     }
-    #endregion
 
     #region Parsing Values
     private Expression Value()
     {
         int pos = index;
-        Expression expr;
-
-        if (Match(TokenValues.Grammar["\""]) && Reset(pos)){ // Val -> " StrExpr "
-            expr = StringExpression();
-            if (expr != null)
-                return expr;
+        if (Match(Token.GetToken("\"")) && Match(TokenType.StringLiteral)){ // Val -> StrExpr
+           return StringExpression();
         }
-        if (Reset(pos) && MatchNumber() && Reset(pos) 
-            || Match(TokenValues.Grammar["("]) && Reset(pos)){ // Val -> Bool: NumExpr Compar NumExpr | NumExpr
+        else if (Reset(pos) && Match(TokenType.NumericLiteral) || Reset(pos) && Match(Token.GetToken("("))){
+            Reset(pos);
             for (int i = index; i < tokens.Count; i++){
-                if (tokens[i] == TokenValues.Grammar["<"]
-                || Reset(pos) && tokens[i] == TokenValues.Grammar["<="]
-                || Reset(pos) && tokens[i] == TokenValues.Grammar[">"]
-                || Reset(pos) && tokens[i] == TokenValues.Grammar[">="]
-                || Reset(pos) && tokens[i] == TokenValues.Grammar["=="]
-                || Reset(pos) && tokens[i] == TokenValues.Grammar["!="]){
-                    expr = OpBool(OpComp(NumericalExpression()));
-                    if (expr != null)
+                if (tokens[i] == Token.GetToken("<") || tokens[i] == Token.GetToken("<=")
+                    || tokens[i] == Token.GetToken(">") || tokens[i] == Token.GetToken(">=")
+                    || tokens[i] == Token.GetToken("==") || tokens[i] == Token.GetToken("!=")){
+                    Expression expr = OpBool(OpComp(NumericalExpression())); // Val -> Bool: NumExpr Compar NumExpr
+                    if (expr != null) 
                         return expr;
                 }
             }
             Reset(pos);
-            expr = NumericalExpression();
-            if (expr != null)
-                return expr;
+            return NumericalExpression(); // Val -> NumExpr
         }
-        if (Reset(pos) && MatchIdentifier()){ // Val -> FuncCall X Y Concat | Var X Y Concat
-            if (Match(TokenValues.Grammar["("])){
-                expr = Concatenation(Y(X(FuncCall())));
-                if (expr != null)
-                    return expr;
-            }
-            Reset(pos);
-            expr = Concatenation(Y(X(new Variable(tokens[index++].Value))));
-            if (expr != null)
-                return expr;
+        else if (Reset(pos) && Match(TokenType.Identifier) && Match(Token.GetToken("("))){ // Val -> FuncCall X Y Concat
+            return X(Y(Concatenation(FuncCall())));
+        }
+        else if (Reset(pos) && Match(TokenType.Identifier)){ // Val -> Var X Y Concat
+            return Concatenation(Y(X(new Variable(tokens[index - 1].Value))));
         }
         Reset(pos);
-        expr = Bool();
-        if (expr != null)
-            return expr;
-        Reset(pos);
-        return null;
+        return Bool();
     }
 
     private Expression FuncCall()
@@ -245,15 +235,24 @@ public class Parser
         string id = tokens[index - 2].Value;
         List<Expression> args = new List<Expression>();
         
-        do
-        {
+        while (index < tokens.Count){
+            if (Match(Token.GetToken(")"))) 
+                break;
+            else
+                index--;
             Expression expr = Value();
             if (expr != null)
                 args.Add(expr);
-            if (tokens[index] == TokenValues.Grammar[","])
-                index++;
-        } while (tokens[index] != TokenValues.Grammar[")"]);
-        index++;
+            else
+                return null;
+            if (!Match(Token.GetToken(",")))
+                index--;
+        }
+
+        if (tokens[index - 1] != Token.GetToken(")")){
+            Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.";
+            return null;
+        }
 
         return new FuncCall(id, args);
     }
@@ -268,84 +267,99 @@ public class Parser
     private Expression Term()
     {
         int pos = index;
-        Expression term;
-        if (MatchNumber()){ // Term -> int Y
-            term = Y(new Number(tokens[index - 1].Value));
-            if (term != null)
-                return term;
+        if (Match(TokenType.NumericLiteral)){ // Term -> int Y
+            return Y(new Number(tokens[index - 1].Value));
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Term -> (NumExpr) Y
-            term = Y(NumericalExpression());
-            if (term != null && Match(TokenValues.Grammar[")"]))
-                return term;
+        else if (Reset(pos) && Match(Token.GetToken("("))){ // Term -> (NumExpr) Y
+            Expression term = Y(NumericalExpression());
+            if (term != null){
+                if (Match(Token.GetToken(")")))
+                    return term;
+                Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.";
+            }
+            Syntax.Info = "Invalid \'numerical expression\' after opening parenthesis.";
         }
-        if (Reset(pos) && MatchIdentifier() && Match(TokenValues.Grammar["("])){ // Term -> FuncCall Y
-            term = Y(FuncCall());
-            if (term != null)
-                return term;
+        else if (Reset(pos) && Match(TokenType.Identifier) && Match(Token.GetToken("("))){ // Term -> FuncCall Y
+            return Y(FuncCall());
         }
-        if (Reset(pos) && MatchIdentifier()){ // Term -> Var Y
-            term = Y(new Variable(tokens[index - 1].Value));
-            if (term != null)
-                return term;
+        else if (Reset(pos) && Match(TokenType.Identifier)){ // Term -> Var Y
+            return Y(new Variable(tokens[index - 1].Value));
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["let"])){ // Term -> LetIn Y
-            term = Y(LetIn());
-            if (term != null)
-                return term;
+        else if (Reset(pos) && Match(Token.GetToken("let"))){ // Term -> LetIn Y
+            return Y(LetIn());
         }
-        Reset(pos);
+
         return null;
     }
 
     private Expression X(Expression left)
     {
         int pos = index;
-        Expression right;
 
-        if (Match(TokenValues.Grammar["+"])){ // X -> + NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Sum, right);
+        if (Match(Token.GetToken("+"))){ // X -> + NumExpr
+            return X(left, Operator.Sum);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["-"])){ // X -> - NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Sub, right);
+        if (Reset(pos) && Match(Token.GetToken("-"))){ // X -> - NumExpr
+            return X(left, Operator.Sub);
         }
 
         Reset(pos);
         return left; // X -> e
     }
 
+    private Expression X(Expression left, Operator op)
+    {
+        Expression right = NumericalExpression();
+        if (right != null)
+            return new BinaryExpression(left, op, right);
+        else{
+            string oper = "";
+            switch (op){
+                case Operator.Sum: oper = "+"; break;
+                case Operator.Sub: oper = "-"; break;
+            }
+            Syntax.Info = $"Missing \'numeric expression\' after \'{oper}\' operator.";
+            return null;
+        }
+    }
+
     private Expression Y(Expression left)
     {
         int pos = index;
-        Expression right;
 
-        if (Match(TokenValues.Grammar["*"])){ // Y -> * Term
-            right = Term();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Mul, right);
+        if (Match(Token.GetToken("*"))){ // Y -> * Term
+            return Y(left, Operator.Mul);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["/"])){ // Y -> / Term
-            right = Term();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Div, right);
+        else if (Reset(pos) && Match(Token.GetToken("/"))){ // Y -> / Term
+            return Y(left, Operator.Div);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["%"])){ // Y -> % Term
-            right = Term();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Mod, right);
+        else if (Reset(pos) && Match(Token.GetToken("%"))){ // Y -> % Term
+            return Y(left, Operator.Mod);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["^"])){ // Y -> ^ Term
-            right = Term();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Pow, right);
+        else if (Reset(pos) && Match(Token.GetToken("^"))){ // Y -> ^ Term
+            return Y(left, Operator.Pow);
         }
 
         Reset(pos);
         return left; // Y -> e
+    }
+
+    private Expression Y(Expression left, Operator op)
+    {
+        Expression right = Term();
+        if (right != null)
+            return new BinaryExpression(left, op, right);
+        else{
+            string oper = "";
+            switch (op){
+                case Operator.Mul: oper = "*"; break;
+                case Operator.Div: oper = "/"; break;
+                case Operator.Mod: oper = "%"; break;
+                case Operator.Pow: oper = "^"; break;
+            }
+            Syntax.Info = $"Missing \'numeric term\' after \'{oper}\' operator.";
+            return null;
+        }
     }
     #endregion
 
@@ -353,41 +367,33 @@ public class Parser
     private Expression Bool()
     {
         int pos = index;
-        Expression expr;
-
-        if (Match(TokenValues.Grammar["true"]) 
-        || Reset(pos) && Match(TokenValues.Grammar["false"])){ // Bool -> BoolLit OpBool
-            expr = OpBool(new BooleanLiteral(tokens[index - 1].Value));
-            if (expr != null)
-                return expr;
+        if (Match(TokenType.BooleanLiteral)){ // Bool -> BoolLit OpBool
+            return OpBool(new BooleanLiteral(tokens[index - 1].Value));
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["("])){ // Bool -> (Bool) OpBool
-            expr = Bool();
-            if (expr != null && Match(TokenValues.Grammar[")"]))
-                return OpBool(expr);
+        else if (Reset(pos) && Match(Token.GetToken("("))){ // Bool -> (Bool) OpBool
+            Expression expr = Bool();
+            if (expr != null){
+                if (Match(Token.GetToken(")")))
+                    return OpBool(expr);
+                else{
+                    Syntax.Info = $"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.";
+                    return null;
+                }
+            }
+            else
+                return null;
         }
-        if (Reset(pos) && MatchIdentifier() && Match(TokenValues.Grammar["("])){ // Bool -> FuncCall X Y OpComp OpBool
-            expr = OpBool(OpComp(Y(X(FuncCall()))));
-            if (expr != null)
-                return expr;
+        else if (Reset(pos) && Match(TokenType.Identifier) && Match(Token.GetToken("("))){ // Bool -> FuncCall X Y OpComp OpBool
+            return OpBool(OpComp(Y(X(FuncCall()))));
         }
-        if (Reset(pos) && MatchIdentifier()){ // Bool -> Var X Y OpComp OpBool
-            expr = OpBool(OpComp(Y(X(new Variable(tokens[index - 1].Value)))));
-            if (expr != null)
-                return expr;
+        else if (Reset(pos) && Match(TokenType.Identifier)){ // Bool -> Var X Y OpComp OpBool
+            return OpBool(OpComp(Y(X(new Variable(tokens[index - 1].Value)))));
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["!"])){ // Bool -> !Bool OpBool
-            expr = OpBool(new NoBool(Bool()));
-            if (expr != null)
-                return expr;
+        else if (Reset(pos) && Match(Token.GetToken("!"))){ // Bool -> !Bool OpBool
+            return OpBool(new NoBool(Bool()));
         }
-        if (Reset(pos)){ // Bool -> NumExpr OpComp OpBool
-            expr = OpComp(NumericalExpression());
-            if (expr != null)
-                return OpBool(expr);
-        }
-
-        return null;
+        Reset(pos); // Bool -> NumExpr OpComp OpBool
+        return OpBool(OpComp(NumericalExpression()));
     }
 
     private Expression OpComp(Expression left)
@@ -396,39 +402,47 @@ public class Parser
             return null;
 
         int pos = index;
-        Expression right;
 
-        if (Match(TokenValues.Grammar["<"])){ // OpComp -> < NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Minor, right);
+        if (Match(Token.GetToken("<"))){ // OpComp -> < NumExpr
+            return OpComp(left, Operator.Minor);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["<="])){ // OpComp -> <= NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.MinorEqual, right);
+        else if (Reset(pos) && Match(Token.GetToken("<="))){ // OpComp -> <= NumExpr
+            return OpComp(left, Operator.MinorEqual);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar[">"])){ // OpComp -> > NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Major, right);
+        else if (Reset(pos) && Match(Token.GetToken(">"))){ // OpComp -> > NumExpr
+            return OpComp(left, Operator.Major);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar[">="])){ // OpComp -> >= NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.MajorEqual, right);
+        else if (Reset(pos) && Match(Token.GetToken(">="))){ // OpComp -> >= NumExpr
+            return OpComp(left, Operator.MajorEqual);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["=="])){ // OpComp -> == NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.Equals, right);
+        else if (Reset(pos) && Match(Token.GetToken("=="))){ // OpComp -> == NumExpr
+            return OpComp(left, Operator.Equals);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["!="])){ // OpComp -> != NumExpr
-            right = NumericalExpression();
-            if (right != null)
-                return new BinaryExpression(left, Operator.NotEqual, right);
+        else if (Reset(pos) && Match(Token.GetToken("!="))){ // OpComp -> != NumExpr
+            return OpComp(left, Operator.NotEqual);
         }
-        return null;
+        else
+            return null;
+    }
+
+    private Expression OpComp(Expression left, Operator op)
+    {
+        Expression right = NumericalExpression();
+        if (right != null)
+            return new BinaryExpression(left, op, right);
+        else{
+            string oper = "";
+            switch (op){
+                case Operator.Minor: oper = "<"; break;
+                case Operator.MinorEqual: oper = "<="; break;
+                case Operator.Major: oper = ">"; break;
+                case Operator.MajorEqual: oper = ">="; break;
+                case Operator.Equals: oper = "=="; break;
+                case Operator.NotEqual: oper = "!="; break;
+            }
+            Syntax.Info = $"Missing \'numerical expression\' after \'{oper}\' operator.";
+            return null;
+        }
     }
 
     private Expression OpBool(Expression left)
@@ -437,49 +451,60 @@ public class Parser
             return null;
 
         int pos = index;
-        Expression right;
-        if (Match(TokenValues.Grammar["&"])){ // OpBool -> & Bool
-            right = Bool();
-            if (right != null)
-                return new BinaryExpression(left, Operator.And, right);
+
+        if (Match(Token.GetToken("&"))){ // OpBool -> & Bool
+            return OpBool(left, Operator.And);
         }
-        if (Reset(pos) && Match(TokenValues.Grammar["|"])){ // OpBool -> | Bool
-            right = Bool();
-            if (right != null)
-                return new BinaryExpression(left, Operator.And, right);
+        if (Reset(pos) && Match(Token.GetToken("|"))){ // OpBool -> | Bool
+            return OpBool(left, Operator.Or);
         }
 
         Reset(pos);
         return left; // OpBool -> e
+    }
+
+    private Expression OpBool(Expression left, Operator op)
+    {
+        Expression right = Bool();
+        if (right != null)
+            return new BinaryExpression(left, op, right);
+        else{
+            string oper = "";
+            switch (op){
+                case Operator.And: oper = "&"; break;
+                case Operator.Or: oper = "|"; break;
+            }
+            Syntax.Info = $"Missing \'boolean expression\' after \'{oper}\' operator.";
+            return null;
+        }
     }
     #endregion
 
     #region Parsing String Expressions
     private Expression StringExpression()
     {
-        if (MatchString()){ // StrExpr -> String Conc
+        // StrExpr -> String Conc
+        if (Match(Token.GetToken("\""))){
             Expression str = Concatenation(new StringLiteral(tokens[index - 2].Value));
             if (str != null)
                 return str;
         }
 
+        Syntax.Info = $"Missing \'closing \"\' after \'{tokens[index - 1].Value}\'.";
         return null;
     }
 
     private Expression Concatenation(Expression left)
     {
-        if (left == null)
-            return null;
-        
         int pos = index;
 
-        if (Match(TokenValues.Grammar["@"])) // Conc -> @ Val
+        if (Match(Token.GetToken("@"))) // Conc -> @ Val
             return new BinaryExpression(left, Operator.Concat, Value());
         
         Reset(pos);
         return left; // Conc -> e
     }
     #endregion
-
+    #endregion
     #endregion
 }

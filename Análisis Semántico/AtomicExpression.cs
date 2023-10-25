@@ -101,12 +101,9 @@ public class FuncCall : AtomicExpression
     {
         Context innerContext = new Context(context);
 
-        foreach (var args in context.GetFunction(Identifier).Keys)
-        {
-            if (args.Length == Args.Length)
-            {
-                for (int i = 0; i < Args.Length; i++)
-                {
+        foreach (var args in context.GetFunction(Identifier).Keys){
+            if (args.Length == Args.Length){
+                for (int i = 0; i < Args.Length; i++){
                     if (innerContext.Define(args[i])){
                         if (Args[i].GetType() == new Variable("").GetType())
                             innerContext.SetValue(args[i], innerContext.GetValue(args[i]));

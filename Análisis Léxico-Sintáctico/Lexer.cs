@@ -1,24 +1,26 @@
 public class Lexer
 {
-    public LexError Lex;
+    public LexError Lex { get; private set; }
 
-    private List<Token> tokens;
+    public List<Token> Tokens { get; private set;}
 
     private readonly string line;
 
     private int i;
 
-    private int N => this.line.Length;
+    private int N => line.Length;
     
     public Lexer(string line)
     {
         Lex = new LexError();
-        tokens = new List<Token>();
+        Tokens = new List<Token>();
         this.line = line;
         i = 0;
+
+        Tokenize();
     }
 
-    public List<Token> GetTokens()
+    private void Tokenize()
     {
         for (; CanLook(); GoForward())
         {
@@ -26,19 +28,18 @@ public class Lexer
                 continue;
             else if (Look() == '\"')
             {
-                this.tokens.Add(TokenValues.Grammar["\""]);
-                this.tokens.Add(GetStringExpression());
-                this.tokens.Add(TokenValues.Grammar["\""]);
+                Tokens.Add(Token.GetToken("\""));
+                Tokens.Add(GetStringExpression());
+                if (Look() == '\"')
+                    Tokens.Add(Token.GetToken("\""));
             }
             else if (char.IsLetterOrDigit(Look()) || char.IsPunctuation(Look()) || char.IsSymbol(Look()))
-                this.tokens.Add(GetToken());
+                Tokens.Add(GetToken());
         }
         
-        foreach (Token token in tokens)
+        foreach (Token token in Tokens)
             if (token == null)
-                return null;
-
-        return tokens;
+                Tokens = null;
     }
 
     #region Lex Tools
@@ -65,7 +66,7 @@ public class Lexer
     private char Look()
     {
         if (CanLook())
-            return this.line[i];
+            return line[i];
         else
             return ' ';
     }
@@ -73,14 +74,9 @@ public class Lexer
     private char LookAhead()
     {
         if (CanLookAhead())
-            return this.line[i + 1];
+            return line[i + 1];
         else
             return ' ';
-    }
-
-    private bool IsToken(string token)
-    {
-        return TokenValues.Grammar.ContainsKey(token);
     }
 
     private bool IsWhiteSpaceOrPunctuationOrSymbol(char c)
@@ -106,15 +102,15 @@ public class Lexer
     {
         string token = Look().ToString();
 
-        if (IsToken(token) && !IsToken(token + LookAhead()))
-            return TokenValues.Grammar[token];
+        if (Token.IsToken(token) && !Token.IsToken(token + LookAhead()))
+            return Token.GetToken(token);
         else
         {
             GoForward();
             token += Look();
 
-            if (IsToken(token) && !IsToken(token + LookAhead()))
-                return TokenValues.Grammar[token];
+            if (Token.IsToken(token) && !Token.IsToken(token + LookAhead()))
+                return Token.GetToken(token);
             else
             {
                 Lex.Info = $"\'{token}\' is not a valid token";
@@ -167,10 +163,10 @@ public class Lexer
                 token += Look();
             else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
             {
-                if (IsToken(token))
+                if (Token.IsToken(token))
                 {
                     GoBack();
-                    return TokenValues.Grammar[token];
+                    return Token.GetToken(token);
                 }
                 else
                 {
@@ -189,16 +185,10 @@ public class Lexer
         GoForward();
         string str = "";
 
-        for (; CanLook(); GoForward())
-        {
-            if (Look() == '\"')
-                return new Token(str, TokenType.StringLiteral);
-            else
-                str += Look();
-        }
+        for (; CanLook() && Look() != '\"'; GoForward())
+            str += Look();
 
-        Lex.Info = "String expression missing closure";
-        return null;
+        return new Token(str, TokenType.StringLiteral);
     }
     #endregion
 }

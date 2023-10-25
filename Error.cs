@@ -2,17 +2,19 @@ public abstract class Error
 {
     protected ErrorType type;
 
-    public string Info { get; set; }
+    protected string info;
 
     public Error()
     {
-        Info = "";
+        info = "";
     }
     
     public void Show()
     {
-        Console.WriteLine("! {0} ERROR: {1}", type, Info);
+        Console.WriteLine("! {0} ERROR: {1}", type, info);
     }
+
+    public string Info { get { return info; } set { if (info == "") info = value; } }
 }
 
 public enum ErrorType
