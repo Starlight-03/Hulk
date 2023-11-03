@@ -1,3 +1,5 @@
+namespace HULK;
+
 public class Token
 {
     public string Value { get; private set; }

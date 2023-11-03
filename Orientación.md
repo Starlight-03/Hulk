@@ -90,7 +90,7 @@ Las condiciones en HULK se implementan con la expresión `if-else`, que recibe u
 Siempre deben incluirse ambas partes:
 
 ```js
-let a = 42 in if (a % 2 == 0) print("Even") else print("odd");
+let a = 42 in if (a % 2 == 0) print("even") else print("odd");
 ```
 
 Como `if-else` es una expresión, se puede usar dentro de otra expresión (al estilo del operador ternario en C#):
@@ -106,7 +106,7 @@ let a = 42 in print(if (a % 2 == 0) "even" else "odd");
 Dado que HULK tiene funciones compuestas, por definición tiene también soporte para recursión. Un ejemplo de una función recursiva en HULK es la siguiente:
 
 ```js
-function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;
+function fib(n) => if (n > 2) fib(n-1) + fib(n-2) else 1;
 ```
 
 Usted debe garantizar que su implementación permite este tipo de definiciones recursivas.
@@ -119,13 +119,13 @@ Este es un ejemplo de una posible interacción:
 ```js
 > let x = 42 in print(x);
 42
-> function fib(n) => if (n > 1) fib(n-1) + fib(n-2) else 1;
-> fib(5)
-13
+> function fib(n) => if (n > 2) fib(n-1) + fib(n-2) else 1;
+> fib(5);
+5
 > let x = 3 in fib(x+1);
-8
+3
 > print(fib(6));
-21
+8
 ```
 
 Cada línea que comienza con `>` representa una entrada del usuario, e immediatamente después se imprime el resultado de evaluar esa expresión, si lo hubiere.

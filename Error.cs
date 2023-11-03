@@ -1,20 +1,18 @@
+namespace HULK;
+
 public abstract class Error
 {
     protected ErrorType type;
 
-    protected string info;
-
-    public Error()
-    {
-        info = "";
-    }
+    private bool hasShowed;
     
-    public void Show()
+    public void Show(string info)
     {
-        Console.WriteLine("! {0} ERROR: {1}", type, info);
+        if (!hasShowed && info != ""){
+            Console.WriteLine("! {0} ERROR: {1}", type, info);
+            hasShowed = true;
+        }
     }
-
-    public string Info { get { return info; } set { if (info == "") info = value; } }
 }
 
 public enum ErrorType

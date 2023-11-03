@@ -1,148 +1,151 @@
-public class AbstractSintaxisTree
-{
-    public SemanticError Semantic { get; private set; }
-
-    public string Value { get; private set; }
-
-    public bool Valid { get; private set; }
-
-    private readonly Expression expr;
-
-    private readonly Context context;
-
-    public AbstractSintaxisTree(Expression expr, Context context)
-    {
-        Semantic = new SemanticError();
-        Value = "";
-        Valid = false;
-        this.expr = expr;
-        this.context = context;
-        Evaluate();
-    }
-
-    private void Evaluate()
-    {
-        if (expr.Validate(context)){
-            Valid = true;
-            expr.Evaluate(context);
-            Value = expr.Value;
-        }
-    }
-}
+namespace HULK;
 
 public class Context
 {
     private Context parent;
 
-    private Dictionary<string, Expression> variables;
+    private Dictionary<string, string> variables;
 
-    private Dictionary<string, Dictionary<string[], Expression>> functions;
+    private Dictionary<string, Type> variableTypes;
+
+    private Dictionary<string, Dictionary<string[], (Expression, Context)>> functions;
 
     public Context(Context parent)
     {
         this.parent = parent;
-        variables = new Dictionary<string, Expression>();
-        functions = new Dictionary<string, Dictionary<string[], Expression>>();
-    }
-    
-    public bool Define(string variable)
-    {
-        if (!variables.ContainsKey(variable))
-        {
-            variables.Add(variable, null);
-            return true;
-        }
-        
-        return false;
-    }
-
-    public bool Define(string function, string[] args, Expression body)
-    {
-        if (!IsDefined(function)){
-            functions[function] = new Dictionary<string[], Expression>();
-        }
-        if (functions.ContainsKey(function) && !functions[function].ContainsKey(args)){
-            functions[function].Add(args, body);
-            return true;
-        }
-        else if (parent != null){
-            return parent.Define(function, args, body);
-        }
-        else
-            return false;
-    }
-
-    public void Undefine(string function, string[] args)
-    {
-        if (functions.ContainsKey(function) && functions[function].ContainsKey(args)){
-            functions[function].Remove(args);
-        }
-        else if (parent != null){
-            parent.Undefine(function, args);
-        }
+        variables = new Dictionary<string, string>();
+        variableTypes = new Dictionary<string, Type>();
+        functions = new Dictionary<string, Dictionary<string[], (Expression, Context)>>();
     }
 
     public bool IsDefined(string variable)
     {
-        return variables.ContainsKey(variable) 
-            || parent != null && parent.IsDefined(variable);
+        if (variables.ContainsKey(variable)){
+            return true;
+        }
+        if (parent != null){
+            return parent.IsDefined(variable);
+        }
+        return false;
     }
     
-    public bool IsDefined(string function, Expression[] args)
+    public bool IsDefined(string function, int args)
     {
         if (functions.ContainsKey(function)){
-            foreach (var ar in functions[function].Keys){
-                if (ar.Length == args.Length)
+            foreach (string[] arguments in functions[function].Keys){
+                if (arguments.Length == args){
                     return true;
+                }
             }
         }
-        
-        return parent != null && parent.IsDefined(function, args);
+        if (parent != null){
+            return parent.IsDefined(function, args);
+        }
+        return false;
+    }
+    
+    public void Define(string variable)
+    {
+        variables.Add(variable, "");
+        variableTypes.Add(variable, Type.NotSet);
+    }
+
+    public void Define(string function, string[] args, Expression body, Context innerContext)
+    {
+        if (!IsDefined(function, args.Length)){
+            if (!functions.ContainsKey(function)){
+                functions[function] = new Dictionary<string[], (Expression, Context)>();
+            }
+            functions[function].Add(args, (body, innerContext));
+        }
+    }
+
+    public void Undefine(string function, string[] args)
+    {
+        if (!functions[function].Remove(args)){
+            if (parent != null){
+                parent.Undefine(function, args);
+            }
+        }
     }
 
     public void SetValue(string variable, Expression expression)
     {
         if (IsDefined(variable)){
-            if (variables.ContainsKey(variable))
-                variables[variable] = expression;
-            else if (parent != null)
+            if (variables.ContainsKey(variable)){
+                variables[variable] = expression.Evaluate(this);
+                SetType(variable);
+            }
+            else if (parent != null){
                 parent.SetValue(variable, expression);
+            }
         }
     }
 
-    public Expression GetValue(string variable)
+    public bool SetType(string variable, Type type = Type.NotSet)
     {
-        if (variables.ContainsKey(variable))
-            return variables[variable];
-        else if (parent != null){
-            Expression val = parent.GetValue(variable);
-            if (val != null)
-                return val;
+        if (IsDefined(variable)){
+            if (variables.ContainsKey(variable)){
+                if (type != Type.NotSet){
+                    if (variableTypes[variable] == Type.NotSet && variableTypes[variable] != type){
+                        variableTypes[variable] = type;
+                        return true;
+                    }
+                    else if (variableTypes[variable] == type)
+                        return true;
+                    else
+                        return false;
+                }
+                if (variableTypes[variable] != Type.NotSet)
+                    return false;
+                if (variables[variable] != ""){
+                    if (double.TryParse(variables[variable], out double n))
+                        variableTypes[variable] = Type.Number;
+                    else if (bool.TryParse(variables[variable], out bool b))
+                        variableTypes[variable] = Type.Boolean;
+                    else
+                        variableTypes[variable] = Type.String;
+                    return true;
+                }
+            }
+            else if (parent != null){
+                parent.SetType(variable);
+            }
         }
-        
-        return null;
+        return false;
     }
 
-    public Dictionary<string[], Expression> GetFunction(string function)
+    public string GetValue(string variable)
     {
-        if (functions.ContainsKey(function))
+        if (variables.ContainsKey(variable)){
+            if (variables[variable] != ""){
+                return variables[variable];
+            }
+        }
+        if (parent != null){
+            return parent.GetValue(variable);
+        }
+        return "";
+    }
+
+    public Type GetType(string variable)
+    {
+        if (variableTypes.ContainsKey(variable)){
+            return variableTypes[variable];
+        }
+        if (parent != null){
+            return parent.GetType(variable);
+        }
+        return Type.NotSet;
+    }
+
+    public Dictionary<string[], (Expression, Context)> GetFunction(string function)
+    {
+        if (functions.ContainsKey(function)){
             return functions[function];
-        else if (parent != null){
-            Dictionary<string[], Expression> func = parent.GetFunction(function);
-            if (func != null)
-                return func;
         }
-        return null;
-    }
-
-    public Expression GetBody(string function, string[] args)
-    {
-        if (functions.ContainsKey(function) && functions[function].ContainsKey(args))
-            return functions[function][args];
-        else if (parent != null){
-            Expression body = parent.GetBody(function, args);
-            if (body != null)
-                return body;
+        if (parent != null){
+            return parent.GetFunction(function);
         }
         return null;
     }

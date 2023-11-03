@@ -1,98 +1,56 @@
+namespace HULK;
+
 public class Lexer
 {
-    public LexError Lex { get; private set; }
+    private LexError lex;
 
-    public List<Token> Tokens { get; private set;}
-
-    private readonly string line;
+    private string line;
 
     private int i;
 
-    private int N => line.Length;
-    
-    public Lexer(string line)
+    public Lexer()
     {
-        Lex = new LexError();
-        Tokens = new List<Token>();
+        lex = new LexError();
+        line = "";
+    }
+
+    public List<Token>? Tokenize(string line)
+    {
+        List<Token> tokens = new List<Token>();
         this.line = line;
         i = 0;
 
-        Tokenize();
-    }
-
-    private void Tokenize()
-    {
-        for (; CanLook(); GoForward())
-        {
-            if (char.IsWhiteSpace(Look()))
+        for (; i < line.Length; i++){
+            if (char.IsWhiteSpace(line[i])){
                 continue;
-            else if (Look() == '\"')
-            {
-                Tokens.Add(Token.GetToken("\""));
-                Tokens.Add(GetStringExpression());
-                if (Look() == '\"')
-                    Tokens.Add(Token.GetToken("\""));
             }
-            else if (char.IsLetterOrDigit(Look()) || char.IsPunctuation(Look()) || char.IsSymbol(Look()))
-                Tokens.Add(GetToken());
+            else if (line[i] == '\"'){
+                tokens.Add(Token.GetToken("\""));
+                tokens.Add(GetStringExpression());
+                if (line[i] == '\"'){
+                    tokens.Add(Token.GetToken("\""));
+                }
+            }
+            else if (char.IsLetterOrDigit(line[i]) || char.IsPunctuation(line[i]) || char.IsSymbol(line[i])){
+                tokens.Add(GetToken());
+            }
         }
         
-        foreach (Token token in Tokens)
-            if (token == null)
-                Tokens = null;
+        foreach (Token token in tokens){
+            if (token == null){
+                return null;
+            }
+        }
+        return tokens;
     }
 
-    #region Lex Tools
-    private void GoForward()
-    {
-        i++;
-    }
-
-    private void GoBack()
-    {
-        i--;
-    }
-
-    private bool CanLook()
-    {
-        return i < N && i >= 0;
-    }
-
-    private bool CanLookAhead()
-    {
-        return i < N - 1;
-    }
-
-    private char Look()
-    {
-        if (CanLook())
-            return line[i];
-        else
-            return ' ';
-    }
-
-    private char LookAhead()
-    {
-        if (CanLookAhead())
-            return line[i + 1];
-        else
-            return ' ';
-    }
-
-    private bool IsWhiteSpaceOrPunctuationOrSymbol(char c)
-    {
-        return char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c);
-    }
-    #endregion
-
-    #region Getting Tokens
     private Token GetToken()
     {
-        if (char.IsPunctuation(Look()) || char.IsSymbol(Look()))
+        if (char.IsPunctuation(line[i]) || char.IsSymbol(line[i]))
             return GetSeparatorOrOperator();
-        else if (char.IsDigit(Look()))
-            return GetNumber();
-        else if (char.IsLetter(Look()))
+        else if (char.IsDigit(line[i]))
+            return GetNumericLiteral();
+        else if (char.IsLetter(line[i]))
             return GetKeywordOrIdentifier();
         else
             return null;
@@ -100,53 +58,53 @@ public class Lexer
 
     private Token GetSeparatorOrOperator()
     {
-        string token = Look().ToString();
+        string token = line[i].ToString();
 
-        if (Token.IsToken(token) && !Token.IsToken(token + LookAhead()))
+        if (Token.IsToken(token) && !Token.IsToken(token + ((i < line.Length - 1) ? line[i + 1] : ' '))){
             return Token.GetToken(token);
-        else
-        {
-            GoForward();
-            token += Look();
+        }
+        else{
+            token += line[++i];
 
-            if (Token.IsToken(token) && !Token.IsToken(token + LookAhead()))
+            if (Token.IsToken(token) && !Token.IsToken(token + ((i < line.Length - 1) ? line[i + 1] : ' '))){
                 return Token.GetToken(token);
-            else
-            {
-                Lex.Info = $"\'{token}\' is not a valid token";
+            }
+            else{
+                lex.Show($"\'{token}\' is not a valid token");
                 return null;
             }
         }
     }
 
-    private Token GetNumber()
+    private Token GetNumericLiteral()
     {
-        string token = "";
+        string token = line[i++].ToString();
         bool point = false;
 
-        for (; CanLook(); GoForward()){
-            if (char.IsDigit(Look()))
-                token += Look();
-            else if (Look() == ',' && char.IsDigit(LookAhead()) && !point){
+        for (; i < line.Length && i >= 0; i++){
+            if (char.IsDigit(line[i])){
+                token += line[i];
+            }
+            else if (line[i] == ',' && char.IsDigit((i < line.Length - 1) ? line[i + 1] : ' ') && !point){
                 token += '.';
                 point = true;
             }
-            else if (Look() == '.' && !point){
-                token += Look();
+            else if (line[i] == '.' && !point){
+                token += line[i];
                 point = true;
             }
-            else if (point && (Look() == ',' || Look() == '.')){
-                token += Look();
-                Lex.Info = $"\'{token}\' is not a valid token";
+            else if (point && (line[i] == ',' || line[i] == '.')){
+                token += '.';
+                lex.Show($"\'{token}\' is not a valid token");
                 break;
             }
-            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look())){
-                GoBack();
+            else if (char.IsWhiteSpace(line[i]) || char.IsPunctuation(line[i]) || char.IsSymbol(line[i])){
+                i--;
                 return new Token(token, TokenType.NumericLiteral);
             }
             else{
-                token += Look();
-                Lex.Info = $"\'{token}\' is not a valid token";
+                token += line[i];
+                lex.Show($"\'{token}\' is not a valid token");
                 break;
             }
         }
@@ -155,40 +113,31 @@ public class Lexer
 
     private Token GetKeywordOrIdentifier()
     {
-        string token = "";
+        string token = line[i++].ToString();
 
-        for (; CanLook(); GoForward())
+        while (i < line.Length)
         {
-            if (char.IsLetterOrDigit(Look()))
-                token += Look();
-            else if (IsWhiteSpaceOrPunctuationOrSymbol(Look()))
-            {
-                if (Token.IsToken(token))
-                {
-                    GoBack();
-                    return Token.GetToken(token);
-                }
-                else
-                {
-                    GoBack();
-                    return new Token(token, TokenType.Identifier);
-                }
+            if (char.IsLetterOrDigit(line[i]))
+                token += line[i++];
+            else if (char.IsWhiteSpace(line[i]) || char.IsPunctuation(line[i]) || char.IsSymbol(line[i])){
+                i--;
+                return Token.IsToken(token) ? Token.GetToken(token) : new Token(token, TokenType.Identifier);
             }
         }
 
-        Lex.Info = $"\'{token}\' is not a valid token";
+        lex.Show($"\'{token}\' is not a valid token");
         return null;
     }
 
     private Token GetStringExpression()
     {
-        GoForward();
-        string str = "";
+        i++;
+        string str = line[i++].ToString();
 
-        for (; CanLook() && Look() != '\"'; GoForward())
-            str += Look();
+        while (i < line.Length && line[i] != '\"'){
+            str += line[i++];
+        }
 
         return new Token(str, TokenType.StringLiteral);
     }
-    #endregion
 }
