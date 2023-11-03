@@ -169,7 +169,7 @@ Errores que se producen por el uso incorrecto de los tipos y argumentos. Por eje
 ! SEMANTIC ERROR: Operator `+` cannot be used between `string` and `number`.
 > print(fib("hello world"));
 ! SEMANTIC ERROR: Function `fib` receives `number`, not `string`.
-> print(fib(4,3));
+> print(fib(4, 3));
 ! SEMANTIC ERROR: Function `fib` receives 1 argument(s), but 2 were given.
 ```
 

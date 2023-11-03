@@ -11,8 +11,7 @@ internal class Program
         while (true){
             Console.Write("> ");
             
-            // string line = Console.ReadLine();
-            string line = "function fib(n) => if (n > 2) fib(n-1) + fib(n-2) else 1;"; Console.WriteLine(line);
+            string line = Console.ReadLine();
             if (line == "")
                 break;
 
@@ -22,28 +21,6 @@ internal class Program
                 continue;
 
             var parser = new Parser();
-            expression = parser.Parse(tokens);
-            if (expression == null)
-                continue;
-
-            if (!expression.Validate(globalContext))
-                continue;
-            
-            value = expression.Evaluate(globalContext);
-            if (value != "")
-                Console.WriteLine(value);
-                
-            Console.Write("> ");
-            line = "print(fib(4, 3));"; Console.WriteLine(line);
-            if (line == "")
-                break;
-
-            lexer = new Lexer();
-            tokens = lexer.Tokenize(line);
-            if (tokens == null)
-                continue;
-
-            parser = new Parser();
             expression = parser.Parse(tokens);
             if (expression == null)
                 continue;
