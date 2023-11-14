@@ -1,7 +1,12 @@
 namespace HULK;
 
-public abstract class LiteralExpression : Expression
+public abstract class LiteralExpression : Expression // Las expresiones literales son el final de nuestro árbol de sintáxis abstracta
 {
+    // Las expresiones literales poseen un valor literal del tipo que fuera dicha expresión
+    // Son válidas estas expresiones de por sí, así que sólo hay que devolver true al validarlas
+    // Al evaluarlas sólo hace falta devolver el valor
+
+    // Las expresiones literales pueden ser: de String, numéricas, booleanas o, funciones predeterminadas (estas últimas son especiales)
     private readonly string value;
 
     protected LiteralExpression(string value)

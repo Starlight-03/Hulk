@@ -1,7 +1,12 @@
 namespace HULK;
 
-public class BinaryExpression : Expression
+public class BinaryExpression : Expression // Una de las expresiones más complejas del compilador (y a la vez más sencillas)
 {
+    // Posee dos expresiones internas, una izquierda y otra derecha, y un operador de por medio
+    // Su tipo es asignado por su operador
+    // Al validar (evaluar) es necesario validar (evaluar) las dos expresiones internas antes de continuar con el resto del proceso
+    // Si dos tipos de expresión no son válidos para el operdor que se está utilizando, se lanza una excepción
+
     private readonly Expression Left;
 
     private readonly Operator Op;
@@ -16,7 +21,7 @@ public class BinaryExpression : Expression
         Type = GetType(op.Op);
     }
 
-    private static Type GetType(Op op)
+    private static Type GetType(Op op) // Define el tipo de la expresión binaria dado su operador
     {
         switch (op){
             case HULK.Op.Sum: case HULK.Op.Sub:
@@ -86,7 +91,8 @@ public class BinaryExpression : Expression
         }
     }
     
-    private string NumericOperation(string left, string right)
+    private string NumericOperation(string left, string right) // Devuelve el valor numérico resultante de aplicar la operación definida por el operador
+                                                               // dados los valores de los dos miembros
     {
         switch (Op.Op){
             case HULK.Op.Sum:
@@ -106,7 +112,8 @@ public class BinaryExpression : Expression
         }
     }
     
-    private string BooleanOperation(string left, string right)
+    private string BooleanOperation(string left, string right) // Devuelve el valor booleano resultante de aplicar la operación definida por el operador
+                                                               // dados los valores de los dos miembros
     {
         switch (Op.Op){
             case HULK.Op.And:

@@ -1,7 +1,12 @@
 namespace HULK;
 
-public class Operator
+public class Operator // Herramienta para las expresiones binarias
 {
+    // * Clase hecha para implementar el método ToString para facilitar el trabajo de 
+    // lanzar una excepción en la expresión binaria dada
+
+    // Todos los operadores son definidos por un enumerador, y tienen su propio valor en string
+    
     public Op Op { get; private set; }
 
     public Operator(Op op)

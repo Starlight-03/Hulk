@@ -1,7 +1,11 @@
 namespace HULK;
 
-public class NoBool : Expression
+public class NoBool : Expression // Esta expresión es una representación del uso del operador booleano de negación
 {
+    // Simplemente posee una expresión booleana que será la que se negará como resultado de evaluar esta expresión
+    // Para validarla, simplemente hay que validar la expresión booleana
+    // Para evaluar, es solo negar la expresión dada
+    
     private readonly Expression Boolean;
 
     public NoBool(Expression boolean)

@@ -1,17 +1,21 @@
 namespace HULK;
 
-public class LetIn : Expression
+public class LetIn : Expression // Esta expresión define variables que se pueden utilizar luego en un ámbito de una expresión interna
 {
+    // Toda expresión "let-in" posee una lista de pares, representando los identificadores de las variables definidas y sus expresiones que les dan valor
+    // Además de una expresión interna que sería el cuerpo del "in"
+
+    // Al validar la expresión primero se definen todas las variables declaradas en un contexto interno y se les asignan sus valores,
+    // y luego se valida el cuerpo en el contexto interno
+    // Para evaluar hace el mismo proceso de definir variables en un contexto interno, y luego se evalúa el cuerpo
+
     private readonly Dictionary<string, Expression> Variables;
     
     private readonly Expression Body;
 
     public LetIn(Dictionary<string, Expression> variables, Expression body)
     {
-        Variables = new Dictionary<string, Expression>();
-        foreach (string variable in variables.Keys)
-            Variables[variable] = variables[variable];
-
+        Variables = variables;
         Body = body;
     }
 

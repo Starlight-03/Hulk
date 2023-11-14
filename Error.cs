@@ -1,13 +1,18 @@
 namespace HULK;
 
-public abstract class Error
+public abstract class Error // Los errores son una herramienta del compilador que notifica al usuario si ha cometido un error
 {
+    // Los errores contienen un tipo de error (Léxico, Sintáctico y Semántico) y 
+    // una descripción del error como información
+
     protected ErrorType type;
 
     private bool hasShowed;
     
-    public void Show(string info)
+    public void Show(string info) // Lanza el error con la información asignada
     {
+        // Los errores al ser lanzados tienen la forma: "! <Tipo de error> ERROR: <descripción>"
+
         if (!hasShowed && info != ""){
             Console.WriteLine("! {0} ERROR: {1}", type, info);
             hasShowed = true;
