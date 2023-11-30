@@ -59,7 +59,6 @@ public class Token  // Utilizaremos esta clase como herramienta para crear los "
         {"!", new Token("!", TokenType.Operator)},
         {"&", new Token("&", TokenType.Operator)},
         {"|", new Token("|", TokenType.Operator)},
-        {"\"", new Token("\"", TokenType.Operator)},
         {"(", new Token("(", TokenType.Separator)},
         {")", new Token(")", TokenType.Separator)},
         {",", new Token(",", TokenType.Separator)},
