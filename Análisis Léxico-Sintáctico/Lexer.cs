@@ -14,11 +14,14 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
 
     private readonly LexError lex;
 
+    private string line;
+
     private int i;
 
     public Lexer()
     {
         lex = new LexError();
+        line = "";
         i = 0;
     }
 
@@ -29,6 +32,7 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
         // se va analizando, según el tipo de caracter que sea, qué tipo de token puede ser
 
         if (line == null) return null;
+        else this.line = line; 
         List<Token> tokens = new List<Token>();
 
         for (; i < line.Length; i++){
@@ -36,14 +40,10 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
                 continue;                               // Así que se salta
             }
             else if (line[i] == '\"'){                  // Si se encuentra con unas comillas dobles entonces lo siguiente debe ser una expressión de string
-                tokens.Add(Token.GetToken("\""));       // Se guarda el string además de las comillas dobles que lo acompañan
-                tokens.Add(GetStringExpression(line));
-                if (line[i] == '\"'){
-                    tokens.Add(Token.GetToken("\""));
-                }
+                tokens.Add(GetStringExpression());
             }                                           // Si se encuentra algún otro caracter válido hay que analizar cúal es y qué tipo de operador devuelve
             else if (char.IsLetterOrDigit(line[i]) || char.IsPunctuation(line[i]) || char.IsSymbol(line[i])){ // Y se devuelve dicho token
-                tokens.Add(GetToken(line));
+                tokens.Add(GetToken());
             }
         }
         
@@ -55,22 +55,24 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
         return tokens;                                  // Si no existen errores, devolver la lista y continuar con la ejecución
     }
 
-    private Token GetToken(string line) // Devuelve un token dado la línea dada y el indizador en donde comience
+    public char Peek() => i < line.Length - 1 ? line[i + 1] : ' ';
+
+    private Token GetToken() // Devuelve un token dado la línea dada y el indizador en donde comience
     {
         // Primero se analiza el caracter en el que se encuentra al inicio del nuevo token,
         // luego se hace la llamada a que se devuelva el tipo de token según el caracter del inicio
 
         if (char.IsPunctuation(line[i]) || char.IsSymbol(line[i]))
-            return GetSeparatorOrOperator(line);
+            return GetSeparatorOrOperator();
         else if (char.IsDigit(line[i]))
-            return GetNumericLiteral(line);
+            return GetNumericLiteral();
         else if (char.IsLetter(line[i]))
-            return GetKeywordOrIdentifier(line);
+            return GetKeywordOrIdentifier();
         else
             return Token.GetToken("null");
     }
 
-    private Token GetSeparatorOrOperator(string line) // Se devuelve un token que pudiera ser separador u operador
+    private Token GetSeparatorOrOperator() // Se devuelve un token que pudiera ser separador u operador
     {
         // Por razones de optimización de código se juntaron los métodos anteriormente separados GetSeparator y
         // GetOperator respectivamente
@@ -83,13 +85,13 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
 
         string token = line[i].ToString();
 
-        if (Token.IsToken(token) && !Token.IsToken(token + ((i < line.Length - 1) ? line[i + 1] : ' '))){
+        if (Token.IsToken(token) && !Token.IsToken(token + Peek())){
             return Token.GetToken(token);
         }
         else{
             token += line[++i];
 
-            if (Token.IsToken(token) && !Token.IsToken(token + ((i < line.Length - 1) ? line[i + 1] : ' '))){
+            if (Token.IsToken(token) && !Token.IsToken(token + Peek())){
                 return Token.GetToken(token);
             }
             else{
@@ -99,7 +101,7 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
         }
     }
 
-    private Token GetNumericLiteral(string line) // Devuelve un token de tipo literal numérico
+    private Token GetNumericLiteral() // Devuelve un token de tipo literal numérico
     {
         string token = line[i++].ToString();    // Si se encuentra un dígito, se busca si el token es un literal numérico
         bool point = false;
@@ -108,16 +110,12 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
             if (char.IsDigit(line[i])){
                 token += line[i];
             }
-            else if (line[i] == ',' && char.IsDigit((i < line.Length - 1) ? line[i + 1] : ' ') && !point){ // Si se encuentra una coma, interpretarla como un punto decimal
-                token += '.';                                                                               // * Si se quiere hacer separación de parámetros por coma, por favor que el usuario añada un espacio entre la coma y el siguiente parámetro
-                point = true;
-            }
             else if (line[i] == '.' && !point){ // Si se encuentra un punto, interpretarlo como un punto decimal y añadirlo
-                token += line[i];               // Luego de él no debe existir ningún punto decimal o saltaría un error (lo mismo pasa con la coma como punto decimal)
+                token += line[i];               // Luego de él no debe existir ningún punto decimal o saltaría un error
                 point = true;
             }
-            else if (point && (line[i] == ',' || line[i] == '.')){ // En caso de existir otro punto o coma como decimal, lanzar un error léxico y devolver un token nulo
-                lex.Show($"\'{token + '.'}\' is not a valid token");
+            else if (point && line[i] == '.'){ // En caso de existir otro punto o coma como decimal, lanzar un error léxico y devolver un token nulo
+                lex.Show($"Cannot have more than one \'.\' on a number.");
                 break;
             }
             else if (char.IsWhiteSpace(line[i]) || char.IsPunctuation(line[i]) || char.IsSymbol(line[i])){
@@ -132,7 +130,7 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
         return Token.GetToken("null");
     }
 
-    private Token GetKeywordOrIdentifier(string line) // Devuelve un token de tipo keyword o literal booleano o identificador
+    private Token GetKeywordOrIdentifier() // Devuelve un token de tipo keyword o literal booleano o identificador
     {
         // Si se encuentra una letra, se busca si el token resultante es una palabra reservada o un identificador
         // Un identificador puede contener números pero no puede comenzar por un número porque se confunde con tokenizar 
@@ -157,21 +155,22 @@ public class Lexer // Esta clase nos ayuda a realizar el proceso de tokenizació
         return Token.GetToken("null");
     }
 
-    private Token GetStringExpression(string line)
+    private Token GetStringExpression()
     {
         // Se va guardando toda la expressión en el string hasta encontrar las próximas comillas dobles
 
         i++;
-        string str = line[i++].ToString();
+        string str = "";
 
         while (i < line.Length && line[i] != '\"'){
             str += line[i++];
         }
 
+        if (line[i - 1] != '\"'){
+            lex.Show("Missing closing '\"' in string expression.");
+            return Token.GetToken("null");
+        }
+        
         return new Token(str, TokenType.StringLiteral);
-
-        // En caso de que se termine la línea y no se hayan encontrado las comillas de cierre, 
-        // se devuelve el string resultante, pero debe ocurrir un error sintáctico al parsear.
-        // Esto no es trabajo del lexer, sino que como tal es un error sintáctico
     }
 }

@@ -38,8 +38,5 @@ public class FuncDef : Expression // Esta expresión nos ayudará a definir func
         return false;
     }
 
-    public override string Evaluate(Context context)
-    {
-        return "";
-    }
+    public override string Evaluate(Context context) => "";
 }

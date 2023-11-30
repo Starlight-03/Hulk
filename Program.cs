@@ -47,10 +47,10 @@ internal class Program
         context.Define("PI", Math.PI.ToString(), Type.Number);
         context.Define("E", Math.E.ToString(), Type.Number);
 
-        context.Define(PredFunc.sin, Type.Number, new Dictionary<string, Type>() {{"x", Type.Number}});
-        context.Define(PredFunc.cos, Type.Number, new Dictionary<string, Type>() {{"x", Type.Number}});
-        context.Define(PredFunc.log, Type.Number, new Dictionary<string, Type>() {{"a", Type.Number}, {"b", Type.Number}});
-        context.Define(PredFunc.ln, Type.Number, new Dictionary<string, Type>() {{"x", Type.Number}});
+        context.Define("sin", new Sin(new string[] {"x"}), new Dictionary<string, Type>() {{"x", Type.Number}});
+        context.Define("cos", new Cos(new string[] {"x"}), new Dictionary<string, Type>() {{"x", Type.Number}});
+        context.Define("log", new Log(new string[] {"a", "b"}), new Dictionary<string, Type>() {{"a", Type.Number}, {"b", Type.Number}});
+        context.Define("ln", new Ln(new string[] {"x"}), new Dictionary<string, Type>() {{"x", Type.Number}});
 
         return context;
     }

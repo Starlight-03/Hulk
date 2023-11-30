@@ -29,13 +29,18 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
             return null;
         }
         
-        if (index == tokens.Count - 1 && Match(Token.GetToken(";"))){ // Si no se encuentra un ";" al finalizar la línea, lanzar una excepción
-            return expr;                                                // Si no, devolver la expresión resultante
+        if (index == tokens.Count - 1){
+            if (!Match(Token.GetToken(";"))){ // Si no se encuentra un ";" al finalizar la línea, lanzar una excepción
+                syntax.Show("Missing \'closing semicolon\'.");
+                return null;
+            }
+            return expr; // Si no, devolver la expresión resultante
         }
-        else{
-            syntax.Show("Missing \'closing semicolon\'.");
+        else if (index < tokens.Count - 1){ // Si ha ocurrido un error que no permitió terminar de parsear, lanzar una expresión
+            syntax.Show($"Parsing error. Invalid expression after \'{tokens[index].Value}\'.");
             return null;
         }
+        return null;
     }
 
     #region Herramientas para parsear
@@ -69,15 +74,17 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
                                      // Sintaxis y posibles valores: Expr -> Print | Func | LetIn | IfElse | Val | (Expr)
     {
         int pos = index; // Se guarda la posición inicial para poder resetearla más tarde
-        if (Match(Token.GetToken("print"))) // Si la expresión comienza con un "print", se predice que es una expresión de llamada al print
-            return Print();
-        if (Match(Token.GetToken("function"))) // Si comienza con "function", se predice que es una expresión de declaración de función
-            return Function();
-        if (Match(Token.GetToken("let"))) // Si comienza con "let", se predice que es una expresión "let-in"
-            return LetIn();
-        if (Match(Token.GetToken("if"))) // Si comienza con "if", se predice que es una expresión "if-else"
-            return IfElse();
-
+        if (Match(TokenType.Keyword)){
+            index--;
+            if (Match(Token.GetToken("print"))) // Si la expresión comienza con un "print", se predice que es una expresión de llamada al print
+                return Print();
+            if (Match(Token.GetToken("function"))) // Si comienza con "function", se predice que es una expresión de declaración de función
+                return Function();
+            if (Match(Token.GetToken("let"))) // Si comienza con "let", se predice que es una expresión "let-in"
+                return LetIn();
+            if (Match(Token.GetToken("if"))) // Si comienza con "if", se predice que es una expresión "if-else"
+                return IfElse();
+        }
         Expression? expr = Value(); // Si no es una de las anteriores, entonces intentamos averiguar si es una expresión de un valor (numérico, booleano o de string)
         if (expr != null) // Si es válida (no es vacía) devolver dicha expresión
             return expr;
@@ -269,38 +276,33 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
         return new IfElse(condition, positive, negative); // Si no ocurrieron errores, devolver una expresión de tipo "if-else"
     }
 
-    #region Parseando Valores
     private Expression? Value() // Parsea una expresión de tipo por valor
                                 // Sintaxis y posibles valores: Val -> StrExpr | Bool : NumExpr Compar NumExpr | NumExpr 
                                 //                                  | FuncCall X Y Concat | Var X Y Concat
     {
-        int pos = index; // Se guarda la posición inicial para poder resetearla más tarde
-        if (Match(Token.GetToken("\"")) && Match(TokenType.StringLiteral)){ // Si el valor comienza con unas comillas y el siguiente token es un literal de string, devolver una expresión de string
-           return Concatenation(StringExpression());
-        }
+        if (Match(TokenType.StringLiteral)) // Si el valor es un literal de string, devolver una expresión de string
+           return Concatenation(new StringLiteral(tokens[index - 1].Value));
 
-        index = pos;
+        int pos = index; // Se guarda la posición inicial para poder resetearla más tarde
         if (Match(TokenType.NumericLiteral) || Match(Token.GetToken("("))){ // Si lo siguiente es una expresión numérica, revisar si es una expresión de compraración o una simple expresión numérica
-            index = pos; // Reseteamos el index a la posición inicial
             for (int i = index; i < tokens.Count; i++){ // Si próximamente se encuentra un operador de comparación después de una expresión numérica
                 if (tokens[i] == Token.GetToken("<") || tokens[i] == Token.GetToken("<=")
                     || tokens[i] == Token.GetToken(">") || tokens[i] == Token.GetToken(">=")
                     || tokens[i] == Token.GetToken("==") || tokens[i] == Token.GetToken("!=")){
-                    Expression? expr = OpBool(OpComp(NumericalExpression())); // Revisar si es válida la expresión de comparación
-                    if (expr != null) // Si es válida, devolver la expresión. Si no, revisar si es simplemente una expresión numérica
-                        return expr;
+                        index = pos; // Reseteamos el index a la posición inicial
+                        Expression? expr = OpBool(OpComp(NumericalExpression())); // Revisar si es válida la expresión de comparación
+                        if (expr != null) // Si es válida, devolver la expresión. Si no, revisar si es simplemente una expresión numérica
+                            return expr;
                 }
             }
             index = pos; // Reseteamos el index a la posición inicial
             return NumericalExpression(); // Y devolvemos la expresión numérica
         }
 
-        index = pos;
-        if (Match(TokenType.Identifier)){ // Si el siguiente token es un identificador: y además le sucede un paréntesis de apertura, entonces devolver una llamada a una función. Si no, entonces devolver una llamada a una variable
-            return Concatenation(OpBool(OpComp(X(Y(Match(Token.GetToken("(")) ? FuncCall() : new Variable(tokens[index - 1].Value))))));
-        }
+        if (Match(TokenType.Identifier)) // Si el siguiente token es un identificador: y además le sucede un paréntesis de apertura, entonces devolver una llamada a una función. Si no, entonces devolver una llamada a una variable
+            return Concatenation(OpBool(OpComp(X(Y(Match(Token.GetToken("(")) ? 
+                    FuncCall() : new Variable(tokens[index - 1].Value))))));
 
-        index = pos; // Reseteamos el index a la posición inicial
         return Bool(); // Y en última instancia buscamos una expresión booleana
 
         // * Tener en cuenta que el return de un llamado a una expresión numérica o booleana puede devolver una expresión no válida,
@@ -313,8 +315,9 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
         string id = tokens[index - 2].Value; // Se guarda el identificador de la función
         List<Expression> args = new List<Expression>(); // Se crea la lista de argumentos de la función que se va a llamar
         
-        while (index < tokens.Count){
+        while (index < tokens.Count - 1){
             if (Match(Token.GetToken(")"))){ // Si se encuentra un paréntesis de cierre se termina el bucle
+                index--;
                 break;
             }
 
@@ -331,19 +334,18 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
             }
         }
         // Si se cerró el bucle puede ser porque se llegó a un paréntesis, pero también puede ser porque se ha llegado al final de la línea
-        if (tokens[index - 1] != Token.GetToken(")")){ // En caso de que haya sido la segunda causa, se verifica revisando si no se detuvo por encontrar un paréntesis de cierre
-            syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'."); // De ser así, lanzar una excepción
+        if (!Match(Token.GetToken(")"))){ // En caso de que haya sido la segunda causa, se verifica revisando si no se detuvo por encontrar un paréntesis de cierre
+            syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 1].Value}\'."); // De ser así, lanzar una excepción
             return null;
         }
 
         return new FuncCall(id, args); // Si no hubo errores, entonces se devuelve una expresión de llamado de una función
     }
 
-    #region Parseando expresiones numéricas
     private Expression? NumericalExpression() // Parsea una expresión numérica
-                                              // Sintaxis: NumExpr -> Term X Y
+                                              // Sintaxis: NumExpr -> Term X
     {
-        return Y(X(Term()));
+        return X(Term());
     }
 
     private Expression? Term() // Parsea un término (numérico)
@@ -353,18 +355,18 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
             return Y(new NumericLiteral(tokens[index - 1].Value));
         }
         else if (Match(Token.GetToken("("))){
-            Expression? term = Y(NumericalExpression());
+            Expression? term = NumericalExpression();
             if (term == null){
                 return null;
             }
             if (!Match(Token.GetToken(")"))){
-                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.");
+                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 1].Value}\'.");
                 return null;
             }
-            return term; 
+            return Y(term); 
         }
         else if (Match(TokenType.Identifier)){
-            return Y(Match(Token.GetToken("(")) ? FuncCall() : new Variable(tokens[index - 1].Value));
+            return Y(Match(Token.GetToken("(")) ? FuncCall() : new Variable(tokens[index].Value));
         }
         else if (Match(Token.GetToken("let"))){
             return Y(LetIn());
@@ -373,71 +375,76 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
     }
 
     private Expression? X(Expression? left) // Parsea las operaciones de segundo nivel (adición y diferencia)
-                                            // Sintaxis y posibles expresiones: X -> + NumExpr | - NumExpr | e
+                                            // Sintaxis y posibles expresiones: X -> + Z | - Z | e
+                                            //                                  Z -> int Y X | (NumExpr) Y X
     {
-        if (left == null){
+        if (left == null)
             return null;
-        }
 
-        if (Match(Token.GetToken("+"))){
-            return X(left, new Operator(Op.Sum));
-        }
-        if (Match(Token.GetToken("-"))){ 
-            return X(left, new Operator(Op.Sub));
-        }
+        if (!Match(Token.GetToken("+")) && !Match(Token.GetToken("-")))
+            return left;
 
-        return left;
-    }
+        string op = tokens[index - 1].Value;
+        Expression? right = null;
 
-    private Expression? X(Expression left, Operator op) // Devuelve la expresión binaria dado el mienbro derecho de la expresión y lel operador dado, llamando a parsear el miembro derecho
-    {
-        Expression? right = NumericalExpression();
-        
+        if (Match(Token.GetToken("("))){
+            right = Y(NumericalExpression());
+            if (!Match(Token.GetToken(")"))){
+                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 1].Value}\'.");
+                return null;
+            }
+        }
+        else
+            right = Y(Match(TokenType.NumericLiteral) ? new NumericLiteral(tokens[index - 1].Value) : 
+                        Match(TokenType.Identifier) ? Match(Token.GetToken("(")) ? FuncCall() : 
+                            new Variable(tokens[index - 1].Value) : 
+                        null);
+
         if (right == null){
             syntax.Show($"Missing \'numeric expression\' after \'{op}\' operator.");
             return null;
         }
-        
-        return new BinaryExpression(left, op, right);
+
+        return X(op == "+" ? new Sum(left, right) : new Sub(left, right));
     }
 
     private Expression? Y(Expression? left) // Parsea las operaciones de primer nivel (multiplicación, división, módulo y potencia)
-                                            // Sintaxis y posibles expresiones: X -> * Term | / Term | % Term | ^ Term | e
+                                            // Sintaxis y posibles expresiones: X -> * Z | / Z | % Z | ^ Z | e
+                                            //                                  Z -> int Y | (NumExpr) Y
     {
-        if (left == null){
+        if (left == null)
             return null;
-        }
 
-        if (Match(Token.GetToken("*"))){
-            return Y(left, new Operator(Op.Mul));
-        }
-        else if (Match(Token.GetToken("/"))){
-            return Y(left, new Operator(Op.Div));
-        }
-        else if (Match(Token.GetToken("%"))){
-            return Y(left, new Operator(Op.Mod));
-        }
-        else if (Match(Token.GetToken("^"))){
-            return Y(left, new Operator(Op.Pow));
-        }
+        if (!Match(Token.GetToken("*")) && !Match(Token.GetToken("/")) 
+            && !Match(Token.GetToken("%")) && !Match(Token.GetToken("^")))
+            return left;
 
-        return left;
-    }
+        string op = tokens[index - 1].Value;
+        Expression? right = null;
 
-    private Expression? Y(Expression left, Operator op) // Devuelve la expresión binaria dado el mienbro derecho de la expresión y lel operador dado, llamando a parsear el miembro derecho
-    {
-        Expression? right = Term();
+        if (Match(Token.GetToken("("))){
+            right = NumericalExpression();
+            if (!Match(Token.GetToken(")"))){
+                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 1].Value}\'.");
+                return null;
+            }
+        }
+        else
+            right = Match(TokenType.NumericLiteral) ? new NumericLiteral(tokens[index - 1].Value) : 
+                    Match(TokenType.Identifier) ? Match(Token.GetToken("(")) ? FuncCall() : 
+                        new Variable(tokens[index - 1].Value) : 
+                    null;
 
         if (right == null){
-            syntax.Show($"Missing \'numeric term\' after \'{op}\' operator.");
+            syntax.Show($"Missing \'numeric expression\' after \'{op}\' operator.");
             return null;
         }
-        
-        return new BinaryExpression(left, op, right);
-    }
-    #endregion
 
-    #region Parseando expresiones booleanas
+        return Y(op == "*" ? new Mul(left, right) : 
+                op == "/" ? new Div(left, right) : 
+                op == "%" ? new Mod(left, right) : new Pow(left, right));
+    }
+
     private Expression? Bool() // Parsea una expresión booleana
                                // Sintaxis y posibles expresiones: Bool -> BoolLit OpBool | (Bool) OpBool | FuncCall X Y OpComp OpBool 
                                //                                       | Var X Y OpComp OpBool | !Bool OpBool | NumExpr OpComp OpBool
@@ -451,7 +458,7 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
                 return null;
             }
             if (!Match(Token.GetToken(")"))){
-                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 2].Value}\'.");
+                syntax.Show($"Missing \'closing parenthesis\' after \'{tokens[index - 1].Value}\'.");
                 return null;
             }
             return OpBool(expr);
@@ -475,37 +482,24 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
         if (left == null)
             return null;
 
-        if (Match(Token.GetToken("<"))){
-            return OpComp(left, new Operator(Op.Minor));
-        }
-        else if (Match(Token.GetToken("<="))){
-            return OpComp(left, new Operator(Op.MinorEqual));
-        }
-        else if (Match(Token.GetToken(">"))){
-            return OpComp(left, new Operator(Op.Major));
-        }
-        else if (Match(Token.GetToken(">="))){
-            return OpComp(left, new Operator(Op.MajorEqual));
-        }
-        else if (Match(Token.GetToken("=="))){
-            return OpComp(left, new Operator(Op.Equals));
-        }
-        else if (Match(Token.GetToken("!="))){
-            return OpComp(left, new Operator(Op.NotEqual));
-        }
-        return left;
-    }
+        if (!Match(Token.GetToken("<")) && !Match(Token.GetToken("<=")) 
+            && !Match(Token.GetToken(">")) && !Match(Token.GetToken(">=")) 
+            && !Match(Token.GetToken("==")) && !Match(Token.GetToken("!=")))
+            return left;
 
-    private Expression? OpComp(Expression left, Operator op) // Devuelve una expresión binaria dado el mienbro izquierdo y el operador de comparación dado, parseando el mienbro derecho
-    {
+        string op = tokens[index - 1].Value;
         Expression? right = NumericalExpression();
-        
+
         if (right == null){
-            syntax.Show($"Missing \'numerical expression\' after \'{op}\' operator.");
+            syntax.Show($"Missing \'numeric expression\' after \'{op}\' operator.");
             return null;
         }
-        
-        return new BinaryExpression(left, op, right);
+
+        return op == "<" ? new Minor(left, right) : 
+                op == "<=" ? new MinorEqual(left, right) : 
+                op == ">" ? new Major(left, right) : 
+                op == ">=" ? new MajorEqual(left, right) : 
+                op == "==" ? new Equals(left, right) : new NotEqual(left, right);
     }
 
     private Expression? OpBool(Expression? left) // Parsea una operación booleana (Y lógico u O lógico)
@@ -515,59 +509,31 @@ public class Parser // El parser revisa la semántica del código, la evalúa y 
             return null;
         }
 
-        if (Match(Token.GetToken("&"))){
-            return OpBool(left, new Operator(Op.And));
-        }
-        if (Match(Token.GetToken("|"))){
-            return OpBool(left, new Operator(Op.Or));
-        }
+        if (!Match(Token.GetToken("&")) && !Match(Token.GetToken("|")))
+            return left;
 
-        return left;
-    }
-
-    private Expression? OpBool(Expression left, Operator op) // Devuelve una expresión binaria dado el mienbro izquierdo y el operador booleano dado, parseando el mienbro derecho
-    {
+        string op = tokens[index - 1].Value;
         Expression? right = Bool();
-        
+
         if (right == null){
-            syntax.Show($"Missing \'boolean expression\' after \'{op}\' operator.");
+            syntax.Show($"Missing \'numeric expression\' after \'{op}\' operator.");
             return null;
         }
 
-        return new BinaryExpression(left, op, right);
-    }
-    #endregion
-
-    #region Parseando expresiones de string
-    private Expression? StringExpression() // Devuelve una expresión de string
-                                           // Sintaxis: StrExpr -> String Conc
-    {
-        if (!Match(Token.GetToken("\""))){
-            syntax.Show($"Missing \'closing \"\' after \'{tokens[index - 1].Value}\'.");
-            return null;
-        }
-
-        return new StringLiteral(tokens[index - 2].Value);
+        return op == "&" ? new And(left, right) : new Or(left, right);
     }
 
     private Expression? Concatenation(Expression? left) // Devuelve una expresión binaria de concatenación dada una expresión de string en el lado izquierdo de la concatenación
                                                         // Sintaxis: Conc -> @ Val | e
     {
-        if (left == null){
+        if (left == null)
             return null;
-        }
 
-        if (Match(Token.GetToken("@"))){
-            Expression? expr = Value();
-            if (expr == null){
-                return null;
-            }
-            return new BinaryExpression(left, new Operator(Op.Concat), expr);
-        }
+        if (!Match(Token.GetToken("@")))
+            return left;
         
-        return left;
+        Expression? right = Value();
+        return right != null ? new Concat(left, right) : null;
     }
-    #endregion
-    #endregion
     #endregion
 }

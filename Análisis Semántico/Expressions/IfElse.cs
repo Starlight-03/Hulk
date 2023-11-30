@@ -23,18 +23,9 @@ public class IfElse : Expression // Esta expresión define, valida y evalúa las
         Negative = negative;
     }
 
-    public override bool Validate(Context context)
-    {
-        return Condition.Validate(context) && Positive.Validate(context) && Negative.Validate(context);
-    }
+    public override bool Validate(Context context) 
+    => Condition.Validate(context) && Positive.Validate(context) && Negative.Validate(context);
 
-    public override string Evaluate(Context context)
-    {
-        if (bool.Parse(Condition.Evaluate(context))){
-            return Positive.Evaluate(context);
-        }
-        else{
-            return Negative.Evaluate(context);
-        }
-    }
+    public override string Evaluate(Context context) 
+    => bool.Parse(Condition.Evaluate(context)) ? Positive.Evaluate(context) : Negative.Evaluate(context);
 }

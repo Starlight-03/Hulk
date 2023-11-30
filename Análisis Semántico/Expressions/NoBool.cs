@@ -23,8 +23,5 @@ public class NoBool : Expression // Esta expresión es una representación del u
         return false;
     }
 
-    public override string Evaluate(Context context)
-    {
-        return Boolean.Evaluate(context);
-    }
+    public override string Evaluate(Context context) => Boolean.Evaluate(context);
 }

@@ -9,10 +9,7 @@ public class Variable : Expression // Esta expresión se utiliza para el llamado
     
     public string Identifier;
 
-    public Variable(string identifier)
-    {
-        Identifier = identifier;
-    }
+    public Variable(string identifier) { Identifier = identifier; }
 
     public override void SetType(Context context, Type type)
     {
@@ -30,8 +27,5 @@ public class Variable : Expression // Esta expresión se utiliza para el llamado
         return false;
     }
 
-    public override string Evaluate(Context context)
-    {
-        return context.GetValue(Identifier);
-    }
+    public override string Evaluate(Context context) => context.GetValue(Identifier);
 }

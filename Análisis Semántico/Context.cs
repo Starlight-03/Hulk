@@ -70,18 +70,17 @@ public class Context // En el contexto nos ayuda a guardar información de varia
         }
     }
 
-    public void Define(PredFunc func, Type type, Dictionary<string, Type> args) // Define una función predeterminada dado su tipo de función predeterminada,
-                                                                                // su tipo devuelto y una lista de pares de identificador de argumentos y sus tipos
+    public void Define(string identifier, PredeterminedFunction function, Dictionary<string, Type> args) // Define una función predeterminada dado su tipo de función predeterminada,
+                                                                                                         // su tipo devuelto y una lista de pares de identificador de argumentos y sus tipos
     {        
         Context innerContext = new Context(this);
         string[] arguments = new string[args.Count];
         int count = 0;
-        foreach (var arg in args.Keys){
+        foreach (string arg in args.Keys){
             innerContext.Define(arg, "", args[arg]);
             arguments[count++] = arg;
         }
-        var function = new PredeterminedFunction(func, type, arguments);
-        Define(func.ToString(), arguments, function, innerContext);
+        Define(identifier, arguments, function, innerContext);
     }
 
     public void Undefine(string function, string[] args) // Indefine una función si ya está definida

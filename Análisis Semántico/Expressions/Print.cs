@@ -12,13 +12,7 @@ public class Print : Expression // Expresión de llamada al método print, para 
         Type = Type.String;
     }
 
-    public override bool Validate(Context context)
-    {
-        return Expr.Validate(context);
-    }
+    public override bool Validate(Context context) => Expr.Validate(context);
 
-    public override string Evaluate(Context context)
-    {
-        return Expr.Evaluate(context);
-    }
+    public override string Evaluate(Context context) => Expr.Evaluate(context);
 }
